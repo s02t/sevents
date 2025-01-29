@@ -1,0 +1,50 @@
+{% include 'base.html' %}
+<div class="row">
+    <h2>Generate New QR Code</h2>
+        <form action="/qr/generate-qr/" method="post">
+            <!-- <input type="text" name="data" placeholder="Enter QR code data" required> -->
+            <button type="submit">Generate QR Code</button>
+        </form>
+
+        {% if message %}
+           <div class="message">{{ message }}</div>
+        {% endif %}
+           <!-- QR Preview Section -->
+           {% if new_qr %}
+           <div class="new-qr-preview">
+               <h2>Newly Generated QR Code</h2>
+               <div class="qr-card highlighted">
+                   <img src="/qr/qr-codes/{{ new_qr.id }}.png" class="qr-image" alt="New QR Code">
+                   <p>Data: {{ new_qr.data }}</p>
+                   <p>Status: <span class="status-{% if new_qr.status %}used{% else %}unused{% endif %}">
+                       {% if new_qr.status %}Used{% else %}Unused{% endif %}
+                   </span></p>
+                   <p>Created: {{ new_qr.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                   <p>ID: {{ new_qr.id }}</p>
+               </div>
+           </div>
+           {% endif %}
+           
+        <h2>Scan QR Code</h2>
+        <form action="/qr/scan-qr/" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required>
+            <button type="submit">Scan QR Code</button>
+        </form>
+    
+        <h2>Existing QR Codes</h2>
+        <div class="qr-container">
+            {% for qr in qr_codes %}
+            <div class="qr-card">
+                <img src="/qr/qr-codes/{{ qr.uuid }}.png" class="qr-image" alt="QR Code">
+                <p>Data: {{ qr.uuid }}</p>
+                <p>Status: <span class="status-{% if qr.status %}used{% else %}unused{% endif %}">
+                    {% if qr.status %}Used{% else %}Unused{% endif %}
+                </span></p>
+                <p>Created: {{ qr.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p>ID: {{ qr.id }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+</div>
+        

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-Time QR Scanner</title>
+    <script src="/static/js/jsQR.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script> -->
+</head>
+<body>
+    <div>
+        <video id="preview" width="100%" height="400"></video>
+    </div>
+    <div id="result"></div>
+
+    <script>
+        const video = document.getElementById('preview');
+        const resultDiv = document.getElementById('result');
+        
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                video.srcObject = stream;
+                video.play();
+                requestAnimationFrame(tick);
+            } catch (error) {
+                resultDiv.innerHTML = `Error accessing camera: ${error}`;
+            }
+        }
+
+        function tick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    handleQRScan(code.data);
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        async function handleQRScan(data) {
+            try {
+                const response = await fetch('/qr/validate-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ uuid: data })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    window.location.href = '/';  // Redirect back to main page
+                } else {
+                    alert(`Error: ${result.detail}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error}`);
+            }
+        }
+
+        initCamera();
+    </script>
+</body>
+</html>

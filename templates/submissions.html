@@ -1,0 +1,38 @@
+{% include 'base.html' %}
+<div class="container container-sm">
+    <table id="datatable" class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>QR Code</th>
+                <th>ID</th>
+                <th>Data</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in qr_codes %}
+            <tr>
+                <th scope="row">{{ loop.index }}</th>
+                <td>
+                    <img src="/qr/qr-codes/{{ item.uuid }}.png" class="qr-image-table" alt="QR Code" style="max-width: 100px;">
+                </td>
+                <td>{{ item.id }}</td>
+                <td>{{ item.uuid }}</td>
+                <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <span class="status-{% if item.status %}used{% else %}unused{% endif %}">
+                        {% if item.status %}Used{% else %}Unused{% endif %}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-danger" onclick="delete_item({{ item.id }})">Delete</button>
+                    <a href="/update/{{ item.id }}" class="btn btn-primary">Edit</a>
+                </td>
+            </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
