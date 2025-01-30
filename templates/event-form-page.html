@@ -55,43 +55,7 @@
             </tbody>
         </table>
         
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Submitted At</th>
-                        <th>QR Code</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for submission in submissions %}
-                    <tr>
-                        <td>{{ submission.first_name }} {{ submission.last_name }}</td>
-                        <td>{{ submission.email }}</td>
-                        <td>{{ submission.phone_number }}</td>
-                        <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>
-                            {% if submission.qr_code %}
-                            <img src="/qr/{{ submission.qr_code.uuid }}" 
-                                 alt="QR Code" 
-                                 class="img-thumbnail" 
-                                 style="width: 80px;">
-                            {% else %}
-                            <span class="text-muted">Pending</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger">Delete</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        
     </div>
 </div>
 {% endif %}
