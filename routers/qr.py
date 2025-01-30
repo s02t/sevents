@@ -16,6 +16,7 @@ from pyzbar.pyzbar import decode
 from PIL import Image
 from typing import Optional
 from datetime import datetime
+import pytz
 templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(
@@ -35,7 +36,7 @@ async def generate_qr(request: Request):
     
     db_qr = QRCode(
         uuid=qr_id,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(pytz.timezone('Asia/Bangkok'))
     )
     
     db.add(db_qr)

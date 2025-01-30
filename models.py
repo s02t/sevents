@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean
 from datetime import datetime
+import pytz
 
 # Database model
 class QRCode(Base):
@@ -22,7 +23,7 @@ class FormModel(Base):
     # Form metadata (not user data)
     title = Column(String)
     description = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Bangkok')))
     
     # Relationship to submissions
     submissions = relationship("Submission", back_populates="form")
@@ -33,8 +34,8 @@ class Submission(Base):
     # User data fields
     first_name = Column(String)
     last_name = Column(String)
-    email = Column(String)
-    phone_number = Column(String)
+    email = Column(String, unique=True)
+    phone_number = Column(String, unique=True)
     
     # Form relationship
     form_id = Column(Integer, ForeignKey("forms.id"))
@@ -42,7 +43,7 @@ class Submission(Base):
     
     # QR Code relationship
     qr_code = relationship("QRCode", back_populates="submission", uselist=False)
-    submitted_at = Column(DateTime, default=datetime.utcnow)
+    submitted_at = Column(DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Bangkok')))
 
 
 # class QRCode(Base):

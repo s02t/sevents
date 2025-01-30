@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import FastAPI, Depends, Request, Form, UploadFile, HTTPException
+from fastapi import FastAPI, Depends, Request, Form, UploadFile, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from routers import qr, submission, form
 from models import Base, QRCode, FormModel
 from database import engine
-from dependencies import get_db
+#from dependencies import get_db
 from sqlalchemy.orm import Session
 
 # FastAPI setup
@@ -18,18 +18,22 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
-db_dependency = Annotated[Session, Depends(get_db)]
+#db_dependency = Annotated[Session, Depends(get_db)]
 # Routes
+
 @app.get("/")
-async def read_root(request: Request, db: db_dependency):
+async def root(request: Request):
+    return RedirectResponse(url="/form", status_code=status.HTTP_302_FOUND)
+# @app.get("/")
+# async def read_root(request: Request, db: db_dependency):
     
-    qr_codes = db.query(QRCode).order_by(QRCode.created_at.desc()).all()
+#     qr_codes = db.query(QRCode).order_by(QRCode.created_at.desc()).all()
     
-    return templates.TemplateResponse("submissions.html", {
-        "request": request,
-        "qr_codes": qr_codes,
+#     return templates.TemplateResponse("submissions.html", {
+#         "request": request,
+#         "qr_codes": qr_codes,
         
-    })
+#     })
 
 
 

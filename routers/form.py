@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, sta
 from fastapi.responses import FileResponse, HTMLResponse
 from starlette import status
 from models import FormModel, Submission
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from database import SessionLocal
 from dependencies import get_db
 from starlette.responses import RedirectResponse
@@ -18,6 +18,7 @@ from pyzbar.pyzbar import decode
 from PIL import Image
 from typing import Optional
 from datetime import datetime
+import pytz
 templates = Jinja2Templates(directory="templates",
 auto_reload=True,  # Critical for development
     cache_size=0)
@@ -71,7 +72,7 @@ async def create_form(
     new_form = FormModel(
         title=title,
         description=description,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(pytz.timezone('Asia/Bangkok'))
     )
     db.add(new_form)
     db.commit()
@@ -88,7 +89,8 @@ async def view_form_submissions(
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
     
-    submissions = db.query(Submission).filter(Submission.form_id == form_id).all()
+    submissions = db.query(Submission).filter(Submission.form_id == form_id).options(joinedload(Submission.qr_code)).all()
+   #qr_codes = db.query(QRCode).options(joinedload(QRCode.submission)).all()
     return templates.TemplateResponse("event-form-page.html", {
         "request": request,
         "current_form": form,

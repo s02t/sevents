@@ -8,6 +8,53 @@
     </div>
     <div class="card-body">
         <!-- <a href="/submissions/new?form_id={{ current_form.id }}" class="btn btn-secondary mb-3">Create Submission</a> -->
+        
+        <table id="datatable" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>QR Code</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Submitted At</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in submissions %}
+                <tr>
+                    <th scope="row">{{ loop.index }}</th>
+                    <td>
+                        <img src="/qr/qr-codes/{{ item.qr_code.uuid }}.png" 
+                             class="img-thumbnail qr-preview" 
+                             alt="QR Code"
+                             style="max-width: 80px;">
+                    </td>
+                    <td>{{ item.first_name }} {{ item.last_name }}</td>
+                    <td>{{ item.email }}</td>
+                    <td>{{ item.phone_number }}</td>
+                    <td>{{ item.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <span class="badge bg-{% if item.qr_code.status %}success{% else %}warning{% endif %}">
+                            {% if item.qr_code.status %}Used{% else %}Unused{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" 
+                                onclick="delete_item({{ item.id }})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <a href="/update/{{ item.id }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>

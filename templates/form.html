@@ -8,12 +8,12 @@
             <div class="modal-content">
                 <form action="/form/forms/" method="POST">
                     <div class="modal-header">
-                        <h5 class="modal-title">Create New Form</h5>
+                        <h5 class="modal-title">Create New Event</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Form Title</label>
+                            <label class="form-label">Event Title</label>
                             <input type="text" name="title" class="form-control" required>
                         </div>
                         <div class="mb-3">
@@ -37,7 +37,8 @@
             <h3 class="mb-0">All Events</h3>
         </div>
         <div class="card-body">
-            <a class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#newFormModal">Create New Form</a>
+            <a class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#newFormModal">Create New Event</a>
+            <a class="btn btn-warning mb-3 float-end" href="/qr/scan-real">SCAN QR</a>
             <div class="list-group">
                 {% for form in forms %}
                 <div class="list-group-item">
@@ -59,14 +60,51 @@
                             <a href="/form/forms/{{ form.id }}" class="btn btn-primary btn-sm">
                                 View Submissions
                             </a>
-                            <a href="/submission/create/{{ form.id }}" class="btn btn-danger btn-sm">
-                                Share Link
+                            <a href="/submission/create/{{ form.id }}" class="btn btn-warning btn-sm">
+                                Enter Form
                             </a>
+                            <button class="btn btn-link btn-sm" onclick="copyLink('/submission/create/{{ form.id }}')">
+                                Copy Link
+                            </button>
+                            
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
         </div>
+
+        
     </div>
+
+    
 </div>
+
+{% block script %}
+<script>
+function copyLink(link) {
+    const fullLink = window.location.origin + link;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(fullLink).then(() => {
+        // Show SweetAlert
+        Swal.fire({
+            title: 'Link Copied!',
+            text: fullLink,
+            icon: 'success',
+            confirmButtonText: 'OK'
+        });
+    }).catch((error) => {
+        console.error('Failed to copy: ', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'Failed to copy the link.',
+            icon: 'error',
+            confirmButtonText: 'Try Again'
+        });
+    });
+}
+</script>
+
+{% endblock %}
+
