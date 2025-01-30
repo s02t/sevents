@@ -18,8 +18,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
+#clear template cache on startup (not neccessary however important if
+#templates not changing or Dynamic Template Changes: If you dynamically 
+#modify templates or the content inside them at runtime, clearing 
+#the cache ensures that those changes are reflected in the next request.
+#⬇️⬇️⬇️⬇️⬇️⬇️
+# @app.on_event("startup")
+# async def clear_template_cache():
+#     templates.env.cache.clear()  
+
+
 #db_dependency = Annotated[Session, Depends(get_db)]
 # Routes
+
 
 @app.get("/")
 async def root(request: Request):

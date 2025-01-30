@@ -1,1 +1,10 @@
 pytz
+fastapi
+uvicorn[standard] 
+python-multipart
+jinja2
+sqlalchemy
+databases
+itsdangerous
+qrcode[pil]
+pyzbar
