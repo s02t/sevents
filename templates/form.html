@@ -1,7 +1,8 @@
 <!-- {{ forms|length }} forms found -->
 
-{% include 'base.html' %}
+{% extends "base.html" %}
 
+{% block content %}
 <div class="container py-5">
     <div class="modal fade" id="newFormModal" >
         <div class="modal-dialog">
@@ -79,6 +80,8 @@
 
     
 </div>
+
+{% endblock %}
 
 {% block script %}
 <script>

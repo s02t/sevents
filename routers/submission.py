@@ -46,7 +46,7 @@ db: Session = Depends(get_db)):
         "submissions": submissions
         
         
-    })
+    })  
 
 @router.get("/create/{form_id}", response_class=HTMLResponse)
 async def new_submission_form(request: Request, form_id: int, 

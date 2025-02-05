@@ -1,5 +1,6 @@
-{% include 'base.html' %}
+{% extends 'base.html' %}
 
+{% block content %}
 <!-- Submissions Table (shown when viewing a specific form) -->
 {% if current_form %}
 <div class="card">
@@ -59,3 +60,4 @@
     </div>
 </div>
 {% endif %}
+{% endblock %}
