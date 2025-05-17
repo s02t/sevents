@@ -6,17 +6,27 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from routers import qr, submission, form
-from models import Base, QRCode, FormModel
+from models import Base, QRCode, FormModel, FormField, Submission
 from database import engine
 #from dependencies import get_db
 from sqlalchemy.orm import Session
+import os
 
 # FastAPI setup
 app = FastAPI()
-Base.metadata.create_all(bind=engine)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/qr_codes", StaticFiles(directory="qr_codes"), name="qr_codes")
+
+# Create directories if they don't exist
+os.makedirs("static/uploads", exist_ok=True)
+os.makedirs("qr_codes", exist_ok=True)
+
+templates = Jinja2Templates(directory="templates")
 
 #clear template cache on startup (not neccessary however important if
 #templates not changing or Dynamic Template Changes: If you dynamically 

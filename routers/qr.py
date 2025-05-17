@@ -4,8 +4,10 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile
 from fastapi.responses import FileResponse
 from starlette import status
-from models import QRCode
+from models import QRCode, Submission, FormModel
+from sqlalchemy.orm import Session, joinedload
 from database import SessionLocal
+from dependencies import get_db
 from starlette.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import qrcode
@@ -116,21 +118,49 @@ class QRData(BaseModel):
     uuid: str
     
 @router.post("/validate-qr")
-async def validate_qr(request: Request, qr_data: QRData):
-    db = SessionLocal()
+async def validate_qr(qr_data: QRData, db: Session = Depends(get_db)):
     try:
+        # Find the QR code
         qr_code = db.query(QRCode).filter(QRCode.uuid == qr_data.uuid).first()
         
         if not qr_code:
-            raise HTTPException(status_code=404, detail="QR code not found")
+            return {"success": False, "message": "QR code not found in system"}
         
+        # Check if QR code is already used
         if qr_code.status:
-            return {"message": "QR code already used!"}
+            return {"success": False, "message": "QR code already used!"}
         
+        # Get the submission associated with this QR code
+        submission = db.query(Submission).filter(Submission.id == qr_code.submission_id).options(
+            joinedload(Submission.form)
+        ).first()
+        
+        if not submission:
+            return {"success": False, "message": "Submission not found"}
+        
+        # Update QR code status to used (checked in)
         qr_code.status = True
         db.commit()
         
-        return {"message": "QR code scanned successfully! Status updated to used."}
+        # Return success with submission data
+        return {
+            "success": True, 
+            "message": "Check-in successful!", 
+            "submission": {
+                "id": submission.id,
+                "form_id": submission.form_id,
+                "field_values": submission.field_values,
+                "submitted_at": submission.submitted_at.isoformat(),
+                "form": {
+                    "id": submission.form.id,
+                    "title": submission.form.title,
+                    "description": submission.form.description,
+                    "location": submission.form.location,
+                    "event_date": submission.form.event_date.isoformat() if submission.form.event_date else None,
+                    "event_time": submission.form.event_time
+                }
+            }
+        }
         
-    finally:
-        db.close()
+    except Exception as e:
+        return {"success": False, "message": f"Error: {str(e)}"}

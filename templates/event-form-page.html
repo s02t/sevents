@@ -3,61 +3,610 @@
 {% block content %}
 <!-- Submissions Table (shown when viewing a specific form) -->
 {% if current_form %}
-<div class="card">
-    <div class="card-header bg-info text-white">
-        <h4 class="mb-0">Submissions for: {{ current_form.title }}</h4>
+<div class="container py-4">
+    <!-- Event Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <h2 class="mb-0 me-3">{{ current_form.title }}</h2>
+                <span class="badge bg-primary">{{ submissions|length }} Registrations</span>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="/submission/create/{{ current_form.id }}" class="btn btn-primary me-2">
+                <i class="bi bi-plus-circle me-1"></i> New Registration
+            </a>
+            <div class="btn-group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button class="dropdown-item" onclick="exportToCSV()"><i class="bi bi-filetype-csv me-2"></i> CSV</button></li>
+                    <li><button class="dropdown-item" onclick="exportToPDF()"><i class="bi bi-filetype-pdf me-2"></i> PDF</button></li>
+                </ul>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <!-- <a href="/submissions/new?form_id={{ current_form.id }}" class="btn btn-secondary mb-3">Create Submission</a> -->
-        
-        <table id="datatable" class="table table-striped">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>QR Code</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Submitted At</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in submissions %}
-                <tr>
-                    <th scope="row">{{ loop.index }}</th>
-                    <td>
-                        <img src="/qr/qr-codes/{{ item.qr_code.uuid }}.png" 
-                             class="img-thumbnail qr-preview" 
-                             alt="QR Code"
-                             style="max-width: 80px;">
-                    </td>
-                    <td>{{ item.first_name }} {{ item.last_name }}</td>
-                    <td>{{ item.email }}</td>
-                    <td>{{ item.phone_number }}</td>
-                    <td>{{ item.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                        <span class="badge bg-{% if item.qr_code.status %}success{% else %}warning{% endif %}">
-                            {% if item.qr_code.status %}Used{% else %}Unused{% endif %}
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h3>{{ submissions|length }}</h3>
+                <p>Total Registrations</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <h3 id="checkedIn">0</h3>
+                <p>Checked In</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <h3 id="pending">0</h3>
+                <p>Pending</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="bi bi-percent"></i>
+                </div>
+                <h3 id="checkinRate">0%</h3>
+                <p>Check-in Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter tools -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
                         </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-danger btn-sm" 
-                                onclick="delete_item({{ item.id }})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        <a href="/update/{{ item.id }}" class="btn btn-primary btn-sm">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        
+                        <input type="text" id="submission-search" class="form-control" placeholder="Search by name, email...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="status-filter" class="form-select">
+                        <option value="all">All Statuses</option>
+                        <option value="true">Checked In</option>
+                        <option value="false">Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <button id="refresh-btn" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submissions Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table id="datatable" class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>QR Code</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Submitted At</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in submissions %}
+                        <tr data-status="{{ item.qr_code.status|lower }}" class="submission-row">
+                            <th scope="row">{{ loop.index }}</th>
+                            <td>
+                                <img src="/qr/qr-codes/{{ item.qr_code.uuid }}.png" 
+                                     class="img-thumbnail qr-preview" 
+                                     alt="QR Code"
+                                     style="max-width: 80px;"
+                                     onclick="showQRModal('{{ item.qr_code.uuid }}', '{{ item.field_values.first_name }} {{ item.field_values.last_name }}')">
+                            </td>
+                            <td>{{ item.field_values.first_name }} {{ item.field_values.last_name }}</td>
+                            <td>
+                                <a href="mailto:{{ item.field_values.email }}">{{ item.field_values.email }}</a>
+                            </td>
+                            <td>{{ item.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{% if item.qr_code.status %}success{% else %}warning{% endif %}">
+                                    {% if item.qr_code.status %}Checked In{% else %}Pending{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="toggleStatus('{{ item.id }}', '{{ item.qr_code.status|lower }}')">
+                                        <i class="bi bi-{% if item.qr_code.status %}x-circle{% else %}check-circle{% endif %}"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmDelete('{{ item.id }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    {% if submissions|length == 0 %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 4rem; color: var(--gray-400);"></i>
+        <h3 class="mt-3">No Registrations Yet</h3>
+        <p class="text-muted">Share your registration link to get started</p>
+        <div class="mt-3">
+            <a href="/submission/create/{{ current_form.id }}" class="btn btn-primary me-2">
+                <i class="bi bi-plus-circle me-1"></i> Add Registration
+            </a>
+            <button class="btn btn-outline-primary" onclick="copyLink('/submission/create/{{ current_form.id }}')">
+                <i class="bi bi-link-45deg me-1"></i> Copy Registration Link
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- QR Code Modal -->
+    <div class="modal fade" id="qrModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalQrImage" src="" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+                    <h5 id="modalAttendeeName" class="mt-3"></h5>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadQR()">
+                        <i class="bi bi-download me-1"></i> Download
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block script %}
+<!-- Add jsPDF and autoTable libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// Calculate stats
+document.addEventListener('DOMContentLoaded', function() {
+    updateStats();
+    setupFilters();
+});
+
+// Export to CSV
+function exportToCSV() {
+    // Get all visible rows (respecting filters)
+    const rows = document.querySelectorAll('tr.submission-row:not([style*="display: none"])');
+    
+    if (rows.length === 0) {
+        Swal.fire({
+            title: 'No Data',
+            text: 'There is no data to export.',
+            icon: 'info'
+        });
+        return;
+    }
+    
+    // Prepare CSV content
+    let csv = [];
+    
+    // Add header row
+    const headers = ['#', 'Name', 'Email', 'Submitted At', 'Status'];
+    csv.push(headers.join(','));
+    
+    // Add data rows
+    rows.forEach((row, index) => {
+        // Get all cells including th and td elements
+        const allCells = row.children;
+        
+        // Index 0 is the # column (th element)
+        // Index 1 is QR Code column (td element)
+        // Index 2 is Name column (td element)
+        // Index 3 is Email column (td element)
+        // Index 4 is Submission Date column (td element)
+        // Index 5 is Status column (td element)
+        
+        const name = allCells[2].textContent.trim();
+        const email = allCells[3].textContent.trim();
+        const submissionDate = allCells[4].textContent.trim();
+        const status = allCells[5].textContent.trim();
+        
+        const rowData = [
+            index + 1,
+            `"${name}"`,
+            `"${email}"`,
+            `"${submissionDate}"`,
+            `"${status}"`
+        ];
+        csv.push(rowData.join(','));
+    });
+    
+    // Create and download the CSV file
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create download link
+    const link = document.createElement('a');
+    const eventTitle = document.querySelector('h2').textContent.trim();
+    const now = new Date().toISOString().slice(0, 10);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${eventTitle}-registrations-${now}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Setup filters for the submissions table
+function setupFilters() {
+    // Search filter
+    const searchInput = document.getElementById('submission-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterSubmissions);
+    }
+    
+    // Status filter
+    const statusFilter = document.getElementById('status-filter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterSubmissions);
+    }
+    
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+    }
+}
+
+// Filter submissions based on search query and status
+function filterSubmissions() {
+    const searchQuery = document.getElementById('submission-search').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+    
+    const rows = document.querySelectorAll('tr.submission-row');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const name = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+        const email = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+        const rowStatus = row.getAttribute('data-status');
+        
+        // Check if row matches both filters
+        const matchesSearch = name.includes(searchQuery) || email.includes(searchQuery) || searchQuery === '';
+        const matchesStatus = statusFilter === 'all' || rowStatus === statusFilter;
+        
+        if (matchesSearch && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update "no results" message
+    const emptyMessage = document.getElementById('no-results-message');
+    if (emptyMessage) {
+        emptyMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+}
+
+// Update statistics based on submission data
+function updateStats() {
+    const submissions = document.querySelectorAll('tr.submission-row');
+    let totalSubmissions = submissions.length;
+    let checkedIn = 0;
+    
+    submissions.forEach(row => {
+        if (row.getAttribute('data-status') === 'true') {
+            checkedIn++;
+        }
+    });
+    
+    let pending = totalSubmissions - checkedIn;
+    let rate = totalSubmissions > 0 ? Math.round((checkedIn / totalSubmissions) * 100) : 0;
+    
+    // Update stats display
+    document.getElementById('checkedIn').textContent = checkedIn;
+    document.getElementById('pending').textContent = pending;
+    document.getElementById('checkinRate').textContent = rate + '%';
+}
+
+// Show QR code in modal
+function showQRModal(uuid, name) {
+    const modal = new bootstrap.Modal(document.getElementById('qrModal'));
+    const modalImage = document.getElementById('modalQrImage');
+    const modalName = document.getElementById('modalAttendeeName');
+    
+    modalImage.src = `/qr/qr-codes/${uuid}.png`;
+    modalImage.setAttribute('data-uuid', uuid);
+    modalName.textContent = name;
+    
+    modal.show();
+}
+
+// Download QR code image
+function downloadQR() {
+    const modalImage = document.getElementById('modalQrImage');
+    const uuid = modalImage.getAttribute('data-uuid');
+    const name = document.getElementById('modalAttendeeName').textContent.replace(/\s+/g, '-');
+    
+    // Create an anchor element to download the image
+    const link = document.createElement('a');
+    link.href = modalImage.src;
+    link.download = `qr-${name}-${uuid}.png`;
+    
+    // Append to the document, click it, and remove it
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Toggle check-in status
+function toggleStatus(id, currentStatus) {
+    // Convert currentStatus from string to boolean if needed
+    const isCurrentlyCheckedIn = currentStatus === 'true';
+    
+    // This would be an API call in a real application
+    Swal.fire({
+        title: isCurrentlyCheckedIn ? 'Mark as Pending?' : 'Check In Attendee?',
+        text: isCurrentlyCheckedIn ? 'This will revert the check-in status' : 'This will mark the attendee as checked in',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, update',
+        confirmButtonColor: '#4361ee',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Here you would make an API call to update the status
+            // For demo, we'll just show a success message and reload
+            Swal.fire({
+                title: 'Updated!',
+                text: 'Status has been updated',
+                icon: 'success',
+                confirmButtonColor: '#4361ee'
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+    });
+}
+
+// Confirm deletion of a submission
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Delete Registration?',
+        text: "This action cannot be undone!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it',
+        confirmButtonColor: '#dc3545',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Here you would make an API call to delete the submission
+            delete_item(id);
+        }
+    });
+}
+
+// Copy registration link to clipboard
+function copyLink(link) {
+    const fullLink = window.location.origin + link;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(fullLink).then(() => {
+        Swal.fire({
+            title: 'Link Copied!',
+            text: 'Registration link has been copied to clipboard',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }).catch(error => {
+        console.error('Error copying link:', error);
+    });
+}
+
+function delete_item(id) {
+    fetch(`/item/delete/${id}`, {method:'DELETE'})
+    .then(response => response.json())
+    .then(data => {
+        // Check if the result element exists
+        const resultElement = document.getElementById("result");
+        if (resultElement) {
+            resultElement.innerHTML = data.message;
+        }
+        
+        // Show completion alert and reload
+        Swal.fire({
+            title: 'Deleted!',
+            text: 'Registration has been removed',
+            icon: 'success',
+            confirmButtonColor: '#4361ee'
+        }).then(() => {
+            window.location.reload();
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'Failed to delete registration',
+            icon: 'error',
+            confirmButtonColor: '#ef476f'
+        });
+    });
+}
+
+// Export to PDF with Excel-like styling
+function exportToPDF() {
+    // Get all visible rows (respecting filters)
+    const rows = document.querySelectorAll('tr.submission-row:not([style*="display: none"])');
+    
+    if (rows.length === 0) {
+        Swal.fire({
+            title: 'No Data',
+            text: 'There is no data to export.',
+            icon: 'info'
+        });
+        return;
+    }
+    
+    // Create PDF document
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Get event details
+    const eventTitle = document.querySelector('h2').textContent.trim();
+    const totalRegistrations = document.querySelector('.badge').textContent.trim();
+    const today = new Date().toLocaleDateString();
+    
+    // Add event header
+    doc.setFontSize(18);
+    doc.text(eventTitle, 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${totalRegistrations} • Generated on ${today}`, 14, 30);
+    
+    // Prepare table data
+    const tableData = [];
+    rows.forEach((row, index) => {
+        // Get all cells including th and td elements
+        const allCells = row.children;
+        
+        // Extract data properly from each cell
+        const name = allCells[2].textContent.trim();
+        const email = allCells[3].textContent.trim();
+        const submissionDate = allCells[4].textContent.trim();
+        const status = allCells[5].textContent.trim();
+        
+        tableData.push([
+            index + 1, 
+            name,
+            email,
+            submissionDate,
+            status
+        ]);
+    });
+    
+    // Add table to PDF
+    doc.autoTable({
+        head: [['#', 'Name', 'Email', 'Submitted At', 'Status']],
+        body: tableData,
+        startY: 40,
+        theme: 'grid',
+        styles: {
+            font: 'helvetica',
+            fontSize: 9,
+            lineColor: [220, 220, 220],
+            lineWidth: 0.1,
+        },
+        headStyles: {
+            fillColor: [66, 139, 202],
+            textColor: 255,
+            fontStyle: 'bold',
+            halign: 'center'
+        },
+        alternateRowStyles: {
+            fillColor: [245, 245, 245]
+        },
+        columnStyles: {
+            0: { // # column
+                halign: 'center',
+                cellWidth: 15
+            },
+            4: { // Status column
+                halign: 'center'
+            }
+        },
+        didDrawCell: function(data) {
+            // Add custom styling for status badges
+            if (data.section === 'body' && data.column.index === 4) {
+                const cell = data.cell;
+                const text = cell.text[0];
+                
+                if (text === 'Checked In') {
+                    doc.setFillColor(40, 167, 69); // Green for checked-in
+                    doc.roundedRect(
+                        cell.x + 1, cell.y + 1,
+                        cell.width - 2, cell.height - 2,
+                        1, 1, 'F'
+                    );
+                    doc.setTextColor(255);
+                    doc.text(text, cell.x + cell.width / 2, cell.y + cell.height / 2, { align: 'center', baseline: 'middle' });
+                } else if (text === 'Pending') {
+                    doc.setFillColor(255, 193, 7); // Yellow for pending
+                    doc.roundedRect(
+                        cell.x + 1, cell.y + 1,
+                        cell.width - 2, cell.height - 2,
+                        1, 1, 'F'
+                    );
+                    doc.setTextColor(33, 37, 41);
+                    doc.text(text, cell.x + cell.width / 2, cell.y + cell.height / 2, { align: 'center', baseline: 'middle' });
+                }
+                
+                return false; // Don't draw the default cell content
+            }
+        }
+    });
+    
+    // Add footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+            `Page ${i} of ${pageCount}`, 
+            doc.internal.pageSize.getWidth() / 2, 
+            doc.internal.pageSize.getHeight() - 10, 
+            { align: 'center' }
+        );
+    }
+    
+    // Generate and download the PDF
+    const filename = `${eventTitle.replace(/\s+/g, '-')}-registrations.pdf`;
+    doc.save(filename);
+}
+</script>
 {% endblock %}

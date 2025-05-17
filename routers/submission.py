@@ -1,10 +1,10 @@
-from typing import Annotated
+from typing import Annotated, Dict, Any
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from starlette import status
-from models import QRCode, Submission, FormModel
+from models import QRCode, Submission, FormModel, FormField, EventImage
 from sqlalchemy.orm import Session, joinedload
 from dependencies import get_db
 from starlette.responses import RedirectResponse
@@ -18,6 +18,7 @@ from PIL import Image
 from typing import Optional
 from datetime import datetime
 import pytz
+import json
 templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(
@@ -37,15 +38,17 @@ db_dependency = Annotated[Session, Depends(get_db)]
 @router.get("/submission-complete/{submission_id}", response_class=HTMLResponse)
 async def completed_submission(request: Request, submission_id: int, 
 db: Session = Depends(get_db)):
-    submissions = db.query(Submission).filter(Submission.id == submission_id).options(joinedload(Submission.qr_code)).first()
-    if not submissions:
-        raise HTTPException(status_code=404, detail="not found")
+    submission = db.query(Submission).filter(Submission.id == submission_id).options(joinedload(Submission.qr_code)).first()
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Get form fields to display the submission data properly
+    fields = db.query(FormField).filter(FormField.form_id == submission.form_id).order_by(FormField.order).all()
     
     return templates.TemplateResponse("submission-complete.html", {
         "request": request,
-        "submissions": submissions
-        
-        
+        "submission": submission,
+        "fields": fields
     })  
 
 @router.get("/create/{form_id}", response_class=HTMLResponse)
@@ -55,30 +58,48 @@ db: Session = Depends(get_db)):
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
     
+    # Get the form fields to dynamically generate the submission form
+    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    
+    # Get event images
+    event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    
     return templates.TemplateResponse("create-submission.html", {
         "request": request,
         "current_form": form,
-        "new_submission_form": True,
-        
+        "fields": fields,
+        "event_images": event_images,
+        "new_submission_form": True
     })
 
 @router.post("/submit")
 async def create_submission(
     request: Request,
-    form_id: int = Form(...),
-    first_name: str = Form(...),
-    last_name: str = Form(...),
-    email: str = Form(...),
-    phone_number: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    # Create submission
+    # Get form data
+    form_data = await request.form()
+    form_id = int(form_data.get("form_id"))
+    
+    # Get form and its fields
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    fields = db.query(FormField).filter(FormField.form_id == form_id).all()
+    
+    # Collect field values into a JSON structure
+    field_values = {}
+    for field in fields:
+        field_value = form_data.get(field.field_name)
+        if field.required and not field_value:
+            raise HTTPException(status_code=400, detail=f"Field {field.label} is required")
+        field_values[field.field_name] = field_value
+    
+    # Create submission with dynamic fields
     new_submission = Submission(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        phone_number=phone_number,
         form_id=form_id,
+        field_values=field_values,
         submitted_at=datetime.now(pytz.timezone('Asia/Bangkok'))
     )
     db.add(new_submission)
@@ -86,22 +107,12 @@ async def create_submission(
     db.refresh(new_submission)
     
     # Create QR code
-    # qr = qrcode.QRCode(
-    #     version=1,
-    #     error_correction=qrcode.constants.ERROR_CORRECT_L,
-    #     box_size=10,
-    #     border=4,
-    # )
-    #qr.add_data(str(new_submission.id))
-    # qr.make(fit=True)
-    # img = qr.make_image(fill_color="black", back_color="white")
-    
-    # # Save QR code
-    # buffer = io.BytesIO()
-    # img.save(buffer)
-    # buffer.seek(0)
-    
     qr_id = str(uuid.uuid4())
+    
+    # Create directory if it doesn't exist
+    os.makedirs("qr_codes", exist_ok=True)
+    
+    # Generate and save QR code image
     img = qrcode.make(qr_id)
     img.save(f"qr_codes/{qr_id}.png")
 
@@ -137,6 +148,28 @@ async def get_qr_code(uuid: str, db: Session = Depends(get_db)):
     buffer.seek(0)
     
     return Response(content=buffer.getvalue(), media_type="image/png")
+
+@router.get("/modal-form/{form_id}", response_class=HTMLResponse)
+async def modal_registration_form(request: Request, form_id: int, 
+db: Session = Depends(get_db)):
+    """Return a compact registration form for embedding in a modal"""
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Get the form fields
+    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    
+    # Get event images
+    event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    
+    return templates.TemplateResponse("partials/registration-form.html", {
+        "request": request,
+        "current_form": form,
+        "fields": fields,
+        "event_images": event_images,
+        "is_modal": True
+    })
 
 # new_form = Form(title="Conference Registration", description="2024 Tech Summit")
 # db.add(new_form)

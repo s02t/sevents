@@ -1,35 +1,284 @@
-{% include 'base.html' %}
+{% extends "base.html" %}
 
-{% if new_submission_form %}
-<div class="card mt-4">
-    <div class="card-header bg-success text-white">
-        <h4 class="mb-0">Register for event: {{ current_form.title }}</h4>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="/submission/submit">
-            <input type="hidden" name="form_id" value="{{ current_form.id }}">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">First Name</label>
-                    <input type="text" name="first_name" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Last Name</label>
-                    <input type="text" name="last_name" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Phone Number</label>
-                    <input type="tel" name="phone_number" class="form-control" required>
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Submit Form</button>
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Event Details Header -->
+            <div class="card mb-4">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <h1 class="display-5 mb-3">{{ current_form.title }}</h1>
+                            <div class="lead text-muted mb-4 event-description markdown-content" id="event-description">{{ current_form.description }}</div>
+                            
+                            {% if current_form.location or current_form.event_date %}
+                            <div class="event-details row mt-4">
+                                {% if current_form.location %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="feature-icon bg-primary bg-gradient text-white rounded-3 p-2 me-3">
+                                            <i class="bi bi-geo-alt-fill"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1">Location</h6>
+                                            <p class="mb-0">{{ current_form.location }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if current_form.event_date %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="feature-icon bg-primary bg-gradient text-white rounded-3 p-2 me-3">
+                                            <i class="bi bi-calendar-event"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1">Date & Time</h6>
+                                            <p class="mb-0">
+                                                {{ current_form.event_date.strftime('%A, %B %d, %Y') }}
+                                                {% if current_form.event_time %}
+                                                    at {{ current_form.event_time }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mt-4">
+                                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#registrationModal">
+                                    <i class="bi bi-pencil-square me-2"></i> Register Now
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 mt-4 mt-lg-0">
+                            {% if event_images and event_images|length > 0 %}
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body p-0">
+                                        {% if event_images|length > 1 %}
+                                            <!-- Carousel for multiple images -->
+                                            <div id="eventImageCarousel" class="carousel slide rounded" data-bs-ride="carousel">
+                                                <div class="carousel-indicators">
+                                                    {% for image in event_images %}
+                                                        <button type="button" data-bs-target="#eventImageCarousel" data-bs-slide-to="{{ loop.index0 }}" {% if loop.first %}class="active" aria-current="true"{% endif %} aria-label="Slide {{ loop.index }}"></button>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="carousel-inner rounded">
+                                                    {% for image in event_images %}
+                                                        <div class="carousel-item {% if loop.first %}active{% endif %}" id="event-image-{{ loop.index }}">
+                                                            <img src="{{ image.image_url }}" class="d-block w-100 rounded" style="height: 300px; object-fit: cover;" alt="{{ current_form.title }} - image {{ loop.index }}">
+                                                            <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-2">
+                                                                <button class="btn btn-sm btn-light" onclick="copyImageMarkdown('{{ loop.index }}')">
+                                                                    <i class="bi bi-markdown me-1"></i> Copy MD
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <button class="carousel-control-prev" type="button" data-bs-target="#eventImageCarousel" data-bs-slide="prev">
+                                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                    <span class="visually-hidden">Previous</span>
+                                                </button>
+                                                <button class="carousel-control-next" type="button" data-bs-target="#eventImageCarousel" data-bs-slide="next">
+                                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                    <span class="visually-hidden">Next</span>
+                                                </button>
+                                            </div>
+                                        {% else %}
+                                            <!-- Single image -->
+                                            <img src="{{ event_images[0].image_url }}" class="img-fluid rounded" style="width: 100%; height: 300px; object-fit: cover;" alt="{{ current_form.title }}">
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </form>
+
+            <!-- Image Gallery -->
+            {% if event_images and event_images|length > 2 %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0">Event Gallery</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for image in event_images %}
+                            <div class="col-6 col-md-3 col-lg-2">
+                                <div class="card h-100 image-card" id="gallery-image-{{ loop.index }}">
+                                    <img src="{{ image.image_url }}" 
+                                         class="card-img-top" 
+                                         style="height: 120px; object-fit: cover; cursor: pointer;"
+                                         onclick="openImageModal('{{ image.image_url }}')"
+                                         alt="Event image {{ loop.index }}">
+                                    <div class="card-footer p-2 text-center bg-light">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="copyImageMarkdown('{{ loop.index }}', true)">
+                                            <i class="bi bi-markdown"></i> MD
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Registration Modal -->
+            <div class="modal fade" id="registrationModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Register for {{ current_form.title }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            {% include "partials/registration-form.html" %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms Modal -->
+            <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="termsModalLabel">Terms and Conditions</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <h6>1. Registration Terms</h6>
+                            <p>By registering for this event, you agree to provide accurate and complete information. The organizers reserve the right to refuse or cancel registrations at their discretion.</p>
+                            
+                            <h6>2. Attendance Policy</h6>
+                            <p>Registrants are expected to conduct themselves professionally during the event. The organizers reserve the right to remove any participant for inappropriate behavior without refund.</p>
+                            
+                            <h6>3. Media Release</h6>
+                            <p>By attending this event, you grant permission for photos, audio, and video recordings of you to be used in promotional materials, social media, and other publications without additional consent or compensation.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Modal -->
+            <div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="privacyModalLabel">Privacy Policy</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <h6>1. Data Collection</h6>
+                            <p>We collect personal information provided during registration including name, email, phone number, and other details you provide. This information is used for event administration, communication, and to provide you with relevant updates.</p>
+                            
+                            <h6>2. Data Usage</h6>
+                            <p>Your information may be shared with event sponsors and partners. You may opt out of promotional communications at any time.</p>
+                            
+                            <h6>3. Data Security</h6>
+                            <p>We implement reasonable security measures to protect your personal information from unauthorized access or disclosure.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endif %}
+{% endblock %}
+
+{% block script %}
+<script>
+// Helper function to get image URL by index
+function getImageUrl(index, isGallery = false) {
+    const selector = isGallery ? `#gallery-image-${index} img` : `#event-image-${index} img`;
+    const imgElement = document.querySelector(selector);
+    return imgElement ? imgElement.getAttribute('src') : null;
+}
+
+// Copy markdown code for an image to clipboard
+function copyImageMarkdown(index, isGallery = false) {
+    const imageUrl = getImageUrl(index, isGallery);
+    if (!imageUrl) return;
+    
+    // Create markdown image syntax
+    const altText = `Event image ${index}`;
+    const imageMarkdown = `![${altText}](${imageUrl})`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(imageMarkdown).then(() => {
+        // Show success toast
+        Swal.fire({
+            title: 'Copied!',
+            text: 'Image markdown copied to clipboard',
+            icon: 'success',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500,
+            timerProgressBar: true
+        });
+    }).catch(err => {
+        console.error('Failed to copy image markdown:', err);
+        // Show error toast
+        Swal.fire({
+            title: 'Error',
+            text: 'Failed to copy to clipboard',
+            icon: 'error',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    });
+}
+
+// Image modal
+function openImageModal(imageUrl) {
+    Swal.fire({
+        imageUrl: imageUrl,
+        imageAlt: 'Event image',
+        showConfirmButton: false,
+        width: 'auto',
+        padding: '1rem',
+        showCloseButton: true,
+        customClass: {
+            image: 'img-fluid'
+        }
+    });
+}
+
+// Form validation
+(function () {
+    'use strict'
+    
+    // Fetch all forms we want to apply validation to
+    var forms = document.querySelectorAll('.needs-validation')
+    
+    // Loop over them and prevent submission
+    Array.prototype.slice.call(forms)
+        .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                
+                form.classList.add('was-validated')
+            }, false)
+        })
+})();
+</script>
+{% endblock %}

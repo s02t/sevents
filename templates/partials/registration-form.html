@@ -1,0 +1,172 @@
+<form action="/submission/submit" method="POST" class="needs-validation" novalidate>
+    <input type="hidden" name="form_id" value="{{ current_form.id }}">
+    
+    {% if not is_modal %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="bi bi-info-circle me-2"></i> Event Information</h5>
+                <p class="mb-0">{{ current_form.title }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Dynamic Form Fields -->
+    <div class="row g-3">
+        {% set field_categories = {} %}
+        
+        <!-- Organize fields by category -->
+        {% for field in fields %}
+            {% if field.field_name.startswith('first_') or field.field_name.startswith('last_') %}
+                {% set _ = field_categories.setdefault('personal', []) %}
+                {% set _ = field_categories['personal'].append(field) %}
+            {% elif field.field_name == 'email' or field.field_name == 'phone' or field.field_type == 'tel' %}
+                {% set _ = field_categories.setdefault('contact', []) %}
+                {% set _ = field_categories['contact'].append(field) %}
+            {% else %}
+                {% set _ = field_categories.setdefault('additional', []) %}
+                {% set _ = field_categories['additional'].append(field) %}
+            {% endif %}
+        {% endfor %}
+        
+        <!-- Personal Information -->
+        {% if field_categories.get('personal') %}
+        <div class="col-12 mb-3">
+            <h6 class="border-bottom pb-2 mb-3">Personal Information</h6>
+            <div class="row g-3">
+                {% for field in field_categories['personal'] %}
+                <div class="col-md-6">
+                    <label for="{{ field.field_name }}" class="form-label">
+                        {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    <input type="{{ field.field_type }}" 
+                           class="form-control" 
+                           id="{{ field.field_name }}" 
+                           name="{{ field.field_name }}" 
+                           placeholder="{{ field.placeholder }}"
+                           {% if field.required %}required{% endif %}>
+                    <div class="invalid-feedback">Please provide your {{ field.label.lower() }}.</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Contact Information -->
+        {% if field_categories.get('contact') %}
+        <div class="col-12 mb-3">
+            <h6 class="border-bottom pb-2 mb-3">Contact Information</h6>
+            <div class="row g-3">
+                {% for field in field_categories['contact'] %}
+                <div class="col-md-6">
+                    <label for="{{ field.field_name }}" class="form-label">
+                        {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi {% if field.field_type == 'email' %}bi-envelope{% elif field.field_type == 'tel' %}bi-phone{% else %}bi-chat-dots{% endif %}"></i>
+                        </span>
+                        <input type="{{ field.field_type }}" 
+                               class="form-control" 
+                               id="{{ field.field_name }}" 
+                               name="{{ field.field_name }}" 
+                               placeholder="{{ field.placeholder }}"
+                               {% if field.required %}required{% endif %}>
+                    </div>
+                    <div class="invalid-feedback">Please provide a valid {{ field.label.lower() }}.</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Additional Fields -->
+        {% if field_categories.get('additional') %}
+        <div class="col-12 mb-3">
+            <h6 class="border-bottom pb-2 mb-3">Additional Information</h6>
+            <div class="row g-3">
+                {% for field in field_categories['additional'] %}
+                <div class="col-md-{% if field.field_type == 'textarea' %}12{% else %}6{% endif %}">
+                    <label for="{{ field.field_name }}" class="form-label">
+                        {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    
+                    {% if field.field_type == 'select' %}
+                        <select class="form-select" 
+                               id="{{ field.field_name }}" 
+                               name="{{ field.field_name }}"
+                               {% if field.required %}required{% endif %}>
+                            <option value="" selected disabled>Choose...</option>
+                            {% if field.options %}
+                                {% for option in field.options.split(',') %}
+                                    <option value="{{ option.strip() }}">{{ option.strip() }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    {% elif field.field_type == 'textarea' %}
+                        <textarea class="form-control" 
+                                id="{{ field.field_name }}" 
+                                name="{{ field.field_name }}" 
+                                placeholder="{{ field.placeholder }}"
+                                rows="3"
+                                {% if field.required %}required{% endif %}></textarea>
+                    {% elif field.field_type == 'checkbox' %}
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="{{ field.field_name }}" 
+                                   name="{{ field.field_name }}" 
+                                   value="yes"
+                                   {% if field.required %}required{% endif %}>
+                            <label class="form-check-label" for="{{ field.field_name }}">
+                                {{ field.placeholder or "Yes" }}
+                            </label>
+                            {% if field.required %}
+                            <div class="invalid-feedback">This field is required.</div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <input type="{{ field.field_type }}" 
+                               class="form-control" 
+                               id="{{ field.field_name }}" 
+                               name="{{ field.field_name }}" 
+                               placeholder="{{ field.placeholder }}"
+                               {% if field.required %}required{% endif %}>
+                    {% endif %}
+                    
+                    {% if field.field_type != 'checkbox' %}
+                    <div class="invalid-feedback">Please provide your {{ field.label.lower() }}.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Terms and Privacy Policy -->
+        <div class="col-12 mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="terms_agree" required>
+                <label class="form-check-label" for="terms_agree">
+                    I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a> and <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a>
+                </label>
+                <div class="invalid-feedback">
+                    You must agree before submitting.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Submission -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+        {% if is_modal %}
+        <button type="button" class="btn btn-outline-secondary me-md-2" data-bs-dismiss="modal">
+            Cancel
+        </button>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-1"></i> Complete Registration
+        </button>
+    </div>
+</form> 

@@ -1,10 +1,10 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile
+from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse
 from starlette import status
-from models import FormModel, Submission
+from models import FormModel, Submission, FormField, EventImage
 from sqlalchemy.orm import Session, joinedload
 from database import SessionLocal
 from dependencies import get_db
@@ -16,9 +16,12 @@ import io
 import os
 from pyzbar.pyzbar import decode
 from PIL import Image
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 import pytz
+import json
+from fastapi.staticfiles import StaticFiles
+
 templates = Jinja2Templates(directory="templates",
 auto_reload=True,  # Critical for development
     cache_size=0)
@@ -29,6 +32,16 @@ router = APIRouter(
     tags=['form']
 )
 db_dependency = Annotated[Session, Depends(get_db)]
+
+class FieldRequest(BaseModel):
+    field_name: str
+    field_type: str
+    label: str
+    placeholder: Optional[str] = None
+    options: Optional[str] = None
+    required: bool = False
+    order: int
+
 @router.get("/test-data")
 async def test_data(db: db_dependency):
     return {
@@ -48,36 +61,229 @@ async def read_root(request: Request, db: db_dependency):
         "forms": forms
     })
 
-# class SubmissionBase(BaseModel):
-#     id: int
-#     form_id: int
-#     data: Optional[str] 
-
-# class FormRequest(BaseModel):
-#     id: int
-#     title: str
-#     description: Optional[str]
-#     created_at: datetime
-#     submissions: Optional[List[SubmissionBase]] = []
-
 @router.post("/forms/")
 async def create_form(
     request: Request,
-    db:  db_dependency,
+    db: db_dependency,
     title: str = Form(...),
-    description: str = Form(...)
-    
+    description: str = Form(...),
+    location: Optional[str] = Form(None),
+    event_date: Optional[str] = Form(None),
+    event_time: Optional[str] = Form(None),
+    images: List[UploadFile] = File(...)
 ):
-    # form_model = Todos(**form_req.model_dump())
+    # Validate at least one image is provided
+    if not images or len(images) == 0:
+        raise HTTPException(status_code=400, detail="At least one image is required")
+    
+    # Create new form with enhanced event information
     new_form = FormModel(
         title=title,
         description=description,
+        location=location,
+        event_date=datetime.fromisoformat(event_date) if event_date else None,
+        event_time=event_time,
         created_at=datetime.now(pytz.timezone('Asia/Bangkok'))
     )
+    
     db.add(new_form)
     db.commit()
+    db.refresh(new_form)
     
-    return RedirectResponse(url="/form", status_code=303)
+    # Create static/uploads directory if it doesn't exist
+    os.makedirs("static/uploads", exist_ok=True)
+    
+    # Process all images
+    for i, image in enumerate(images):
+        if image and image.filename:
+            # Generate unique filename
+            file_extension = os.path.splitext(image.filename)[1]
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            file_path = f"static/uploads/{unique_filename}"
+            
+            # Save image
+            with open(file_path, "wb") as f:
+                contents = await image.read()
+                f.write(contents)
+            
+            # Create image record
+            event_image = EventImage(
+                form_id=new_form.id,
+                image_url=f"/static/uploads/{unique_filename}",
+                is_primary=(i == 0)  # First image is primary
+            )
+            db.add(event_image)
+    
+    # For backward compatibility
+    first_image = db.query(EventImage).filter(EventImage.form_id == new_form.id, EventImage.is_primary == True).first()
+    if first_image:
+        new_form.image_url = first_image.image_url
+    
+    # Add default fields (email is typically required)
+    default_fields = [
+        FormField(
+            form_id=new_form.id,
+            field_name="email",
+            field_type="email",
+            label="Email Address",
+            placeholder="Enter your email",
+            required=True,
+            order=1
+        ),
+        FormField(
+            form_id=new_form.id,
+            field_name="first_name",
+            field_type="text",
+            label="First Name",
+            placeholder="Enter your first name",
+            required=True,
+            order=2
+        ),
+        FormField(
+            form_id=new_form.id,
+            field_name="last_name",
+            field_type="text",
+            label="Last Name",
+            placeholder="Enter your last name",
+            required=True,
+            order=3
+        )
+    ]
+    
+    db.bulk_save_objects(default_fields)
+    db.commit()
+    
+    return RedirectResponse(url=f"/form/forms/{new_form.id}/edit", status_code=303)
+
+@router.post("/forms/{form_id}/update")
+async def update_form(
+    request: Request,
+    form_id: int,
+    db: Session = Depends(get_db),
+    title: str = Form(...),
+    description: str = Form(...),
+    location: Optional[str] = Form(None),
+    event_date: Optional[str] = Form(None),
+    event_time: Optional[str] = Form(None),
+    images: List[UploadFile] = File(None)
+):
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Update basic details
+    form.title = title
+    form.description = description
+    form.location = location
+    form.event_date = datetime.fromisoformat(event_date) if event_date and event_date.strip() else None
+    form.event_time = event_time
+    
+    # Handle image uploads
+    if images and len(images) > 0:
+        # Create directory if it doesn't exist
+        os.makedirs("static/uploads", exist_ok=True)
+        
+        # Get existing images
+        existing_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+        
+        # If form has no existing images, at least one is required
+        if len(existing_images) == 0 and (not images or len(images) == 0 or not images[0].filename):
+            raise HTTPException(status_code=400, detail="At least one image is required")
+        
+        # Process all new images
+        primary_set = False
+        for i, image in enumerate(images):
+            if image and image.filename:
+                # Generate unique filename
+                file_extension = os.path.splitext(image.filename)[1]
+                unique_filename = f"{uuid.uuid4()}{file_extension}"
+                file_path = f"static/uploads/{unique_filename}"
+                
+                # Save image
+                with open(file_path, "wb") as f:
+                    contents = await image.read()
+                    f.write(contents)
+                
+                # Create new image record
+                is_primary = not primary_set and (i == 0 or len(existing_images) == 0)
+                if is_primary:
+                    primary_set = True
+                
+                event_image = EventImage(
+                    form_id=form_id,
+                    image_url=f"/static/uploads/{unique_filename}",
+                    is_primary=is_primary
+                )
+                db.add(event_image)
+        
+        # Update primary image for backwards compatibility
+        primary_image = db.query(EventImage).filter(EventImage.form_id == form_id, EventImage.is_primary == True).first()
+        if primary_image:
+            form.image_url = primary_image.image_url
+    
+    db.commit()
+    
+    return RedirectResponse(url=f"/form/forms/{form_id}/edit", status_code=303)
+
+@router.get("/forms/{form_id}/edit", response_class=HTMLResponse)
+async def edit_form(
+    request: Request,
+    form_id: int,
+    db: Session = Depends(get_db)
+):
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    
+    return templates.TemplateResponse("edit-form.html", {
+        "request": request,
+        "current_form": form,
+        "fields": fields,
+        "forms": db.query(FormModel).all()
+    })
+
+@router.post("/forms/{form_id}/fields")
+async def add_field(
+    form_id: int,
+    field_data: FieldRequest,
+    db: Session = Depends(get_db)
+):
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    new_field = FormField(
+        form_id=form_id,
+        field_name=field_data.field_name,
+        field_type=field_data.field_type,
+        label=field_data.label,
+        placeholder=field_data.placeholder,
+        options=field_data.options,
+        required=field_data.required,
+        order=field_data.order
+    )
+    
+    db.add(new_field)
+    db.commit()
+    
+    return {"message": "Field added successfully", "field_id": new_field.id}
+
+@router.delete("/forms/{form_id}/fields/{field_id}")
+async def delete_field(
+    form_id: int,
+    field_id: int,
+    db: Session = Depends(get_db)
+):
+    field = db.query(FormField).filter(FormField.id == field_id, FormField.form_id == form_id).first()
+    if not field:
+        raise HTTPException(status_code=404, detail="Field not found")
+    
+    db.delete(field)
+    db.commit()
+    
+    return {"message": "Field deleted successfully"}
 
 @router.get("/forms/{form_id}", response_class=HTMLResponse)
 async def view_form_submissions(
@@ -90,10 +296,109 @@ async def view_form_submissions(
         raise HTTPException(status_code=404, detail="Form not found")
     
     submissions = db.query(Submission).filter(Submission.form_id == form_id).options(joinedload(Submission.qr_code)).all()
-   #qr_codes = db.query(QRCode).options(joinedload(QRCode.submission)).all()
+    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    
     return templates.TemplateResponse("event-form-page.html", {
         "request": request,
         "current_form": form,
         "submissions": submissions,
-        "forms": db.query(FormModel).all()
+        "fields": fields,
+        "forms": db.query(FormModel).all(),
+        "event_images": event_images
     })
+
+@router.get("/forms/{form_id}/images")
+async def get_form_images(
+    form_id: int,
+    db: Session = Depends(get_db)
+):
+    # Get all images for the form
+    images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    
+    return {
+        "images": [
+            {
+                "id": image.id,
+                "url": image.image_url,
+                "is_primary": image.is_primary
+            }
+            for image in images
+        ]
+    }
+
+@router.post("/forms/{form_id}/images/{image_id}/set-primary")
+async def set_primary_image(
+    form_id: int,
+    image_id: int,
+    db: Session = Depends(get_db)
+):
+    # Check if image exists
+    image = db.query(EventImage).filter(EventImage.id == image_id, EventImage.form_id == form_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Reset all primary flags
+    db.query(EventImage).filter(EventImage.form_id == form_id).update({"is_primary": False})
+    
+    # Set this image as primary
+    image.is_primary = True
+    
+    # Update form.image_url for backward compatibility
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if form:
+        form.image_url = image.image_url
+    
+    db.commit()
+    
+    return {"success": True}
+
+@router.delete("/forms/{form_id}/images/{image_id}")
+async def delete_image(
+    form_id: int,
+    image_id: int,
+    db: Session = Depends(get_db)
+):
+    # Check if image exists
+    image = db.query(EventImage).filter(EventImage.id == image_id, EventImage.form_id == form_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Count existing images
+    image_count = db.query(EventImage).filter(EventImage.form_id == form_id).count()
+    
+    # Don't allow deletion if this is the only image
+    if image_count <= 1:
+        raise HTTPException(status_code=400, detail="Cannot delete the only image. At least one image is required.")
+    
+    # If this is the primary image, set another one as primary
+    if image.is_primary:
+        # Find another image to set as primary
+        other_image = db.query(EventImage).filter(
+            EventImage.form_id == form_id, 
+            EventImage.id != image_id
+        ).first()
+        
+        if other_image:
+            other_image.is_primary = True
+            
+            # Update form.image_url for backward compatibility
+            form = db.query(FormModel).filter(FormModel.id == form_id).first()
+            if form:
+                form.image_url = other_image.image_url
+    
+    # Delete the physical file if possible
+    if image.image_url and image.image_url.startswith("/static/uploads/"):
+        file_path = "." + image.image_url
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                # Log error but continue
+                print(f"Error removing file {file_path}: {str(e)}")
+    
+    # Delete the image record
+    db.delete(image)
+    db.commit()
+    
+    return {"success": True}

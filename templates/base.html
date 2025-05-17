@@ -6,6 +6,53 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" type="text/css" href="{{url_for('static', path='/css/bootstrap.css')}}">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.2.1/css/dataTables.dataTables.min.css">
+    <style>
+        /* Custom styling for markdown content */
+        .markdown-content {
+            line-height: 1.6;
+        }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, 
+        .markdown-content h4, .markdown-content h5, .markdown-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .markdown-content p {
+            margin-bottom: 1rem;
+        }
+        .markdown-content ul, .markdown-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+        .markdown-content blockquote {
+            border-left: 4px solid #e9ecef;
+            padding-left: 1rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        .markdown-content pre, .markdown-content code {
+            background-color: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .markdown-content pre {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+        }
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+        .markdown-content a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     {% include 'navbar.html' %}
@@ -114,11 +161,24 @@
   
     <script src="{{ url_for('static', path='/js/jquery-slim.js')}}"></script>
     <script src="{{ url_for('static', path='/js/jsQR.min.js')}}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="{{ url_for('static', path='/js/bootstrap.js')}}"></script>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <script src="//cdn.datatables.net/2.2.1/js/dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@5.1.0/marked.min.js"></script>
     <script src="{{ url_for('static', path='/js/script.js')}}"></script>
+    <script>
+        // Initialize markdown parsing for all markdown-content elements
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.markdown-content').forEach(function(el) {
+                if (el.innerHTML) {
+                    // Parse markdown content
+                    el.innerHTML = marked.parse(el.innerHTML);
+                }
+            });
+        });
+    </script>
     <!-- https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js -->
 </body>
 </html>

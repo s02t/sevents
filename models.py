@@ -1,5 +1,5 @@
 from database import Base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean
 from datetime import datetime
@@ -17,25 +17,55 @@ class QRCode(Base):
     submission_id = Column(Integer, ForeignKey("submissions.id"), unique=True)
     submission = relationship("Submission", back_populates="qr_code")
 
+class EventImage(Base):
+    __tablename__ = "event_images"
+    id = Column(Integer, primary_key=True, index=True)
+    form_id = Column(Integer, ForeignKey("forms.id"))
+    image_url = Column(String, nullable=False)
+    is_primary = Column(Boolean, default=False)  # Flag for primary image
+    created_at = Column(DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Bangkok')))
+    
+    # Relationship
+    form = relationship("FormModel", back_populates="images")
+
 class FormModel(Base):
     __tablename__ = "forms"
     id = Column(Integer, primary_key=True, index=True)
-    # Form metadata (not user data)
+    # Form metadata
     title = Column(String)
     description = Column(String)
+    location = Column(String, nullable=True)
+    event_date = Column(DateTime, nullable=True)
+    event_time = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)  # Legacy field - maintain for backward compatibility
     created_at = Column(DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Bangkok')))
     
-    # Relationship to submissions
+    # Relationships
+    fields = relationship("FormField", back_populates="form", cascade="all, delete-orphan")
     submissions = relationship("Submission", back_populates="form")
+    images = relationship("EventImage", back_populates="form", cascade="all, delete-orphan")
+
+class FormField(Base):
+    __tablename__ = "form_fields"
+    id = Column(Integer, primary_key=True, index=True)
+    form_id = Column(Integer, ForeignKey("forms.id"))
+    field_name = Column(String, nullable=False)
+    field_type = Column(String, nullable=False)  # text, email, number, select, etc.
+    label = Column(String, nullable=False)
+    placeholder = Column(String, nullable=True)
+    options = Column(String, nullable=True)  # For select fields, comma-separated options
+    required = Column(Boolean, default=False)
+    order = Column(Integer, default=0)
+    
+    # Relationship
+    form = relationship("FormModel", back_populates="fields")
 
 class Submission(Base):
     __tablename__ = "submissions"
     id = Column(Integer, primary_key=True, index=True)
-    # User data fields
-    first_name = Column(String)
-    last_name = Column(String)
-    email = Column(String, unique=True)
-    phone_number = Column(String, unique=True)
+    
+    # Store dynamic form field values as JSON
+    field_values = Column(JSON, nullable=False, default=dict)
     
     # Form relationship
     form_id = Column(Integer, ForeignKey("forms.id"))

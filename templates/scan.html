@@ -1,74 +1,604 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Real-Time QR Scanner</title>
-    <script src="/static/js/jsQR.min.js"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script> -->
-</head>
-<body>
-    <div>
-        <video id="preview" width="100%" height="400"></video>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Scanner Header -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-qr-code-scan" style="font-size: 3rem; color: var(--primary-color);"></i>
+                    </div>
+                    <h2 class="mb-2">QR Code Scanner</h2>
+                    <p class="text-muted">Position the QR code inside the scanner frame</p>
+                </div>
+            </div>
+
+            <!-- Scanner Container -->
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <!-- Video preview with canvas overlay -->
+                    <div class="position-relative">
+                        <div id="loadingMessage" class="alert alert-info m-3">🎥 Loading video...</div>
+                        <canvas id="canvas" class="d-none w-100"></canvas>
+                        <video id="video" class="w-100" playsinline></video>
+                        
+                        <!-- Scanner frame overlay -->
+                        <div id="scannerFrame" class="position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px solid var(--primary-color); width: 250px; height: 250px; display: none;">
+                            <div class="position-absolute" style="top: -2px; left: -2px; width: 30px; height: 30px; border-top: 4px solid var(--primary-color); border-left: 4px solid var(--primary-color);"></div>
+                            <div class="position-absolute" style="top: -2px; right: -2px; width: 30px; height: 30px; border-top: 4px solid var(--primary-color); border-right: 4px solid var(--primary-color);"></div>
+                            <div class="position-absolute" style="bottom: -2px; left: -2px; width: 30px; height: 30px; border-bottom: 4px solid var(--primary-color); border-left: 4px solid var(--primary-color);"></div>
+                            <div class="position-absolute" style="bottom: -2px; right: -2px; width: 30px; height: 30px; border-bottom: 4px solid var(--primary-color); border-right: 4px solid var(--primary-color);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls & Status -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="torchSwitch">
+                                    <label class="form-check-label" for="torchSwitch">Toggle Flashlight</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                            <button class="btn btn-outline-primary me-2" id="switchCamera">
+                                <i class="bi bi-camera-video me-1"></i> Switch Camera
+                            </button>
+                            <button class="btn btn-primary" onclick="openImagePicker()">
+                                <i class="bi bi-image me-1"></i> Upload QR
+                            </button>
+                            <input type="file" id="filePicker" accept="image/*" class="d-none" onchange="handleImageUpload(event)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Card (initially hidden) -->
+            <div id="resultCard" class="card mb-4 d-none">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">QR Code Scanned!</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h4 id="attendeeName">Attendee Name</h4>
+                        <p id="attendeeDetails" class="mb-1">Email: example@email.com</p>
+                        <p id="formName" class="text-muted">Form: Event Name</p>
+                    </div>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <span id="scanResultStatus">Successfully checked in!</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-3">
+                        <button class="btn btn-secondary" onclick="resetScanner()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Scan Another
+                        </button>
+                        <button class="btn btn-primary" onclick="viewDetails()">
+                            <i class="bi bi-info-circle me-1"></i> View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Scans -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Scans</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearScans()">
+                        <i class="bi bi-trash"></i> Clear
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush" id="recentScans">
+                        <li class="list-group-item text-center text-muted py-5">
+                            No recent scans
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="result"></div>
+</div>
+{% endblock %}
 
-    <script>
-        const video = document.getElementById('preview');
-        const resultDiv = document.getElementById('result');
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the QR scanner
+    initScanner();
+    
+    // Initialize recent scans from localStorage
+    initRecentScans();
+    
+    // Setup camera switch button
+    document.getElementById('switchCamera').addEventListener('click', switchCamera);
+    
+    // Setup torch toggle
+    const torchSwitch = document.getElementById('torchSwitch');
+    if (torchSwitch) {
+        torchSwitch.addEventListener('change', toggleTorch);
+    }
+});
+
+let video = document.getElementById('video');
+let canvasElement = document.getElementById('canvas');
+let canvas = canvasElement.getContext('2d');
+let loadingMessage = document.getElementById('loadingMessage');
+let currentStream = null;
+let currentFacingMode = 'environment'; // Start with back camera
+let isScanning = true; // Flag to control scanning state
+let lastScannedCode = null; // Track the last scanned code
+let scanCooldown = false; // Prevent rapid successive scans
+
+function initScanner() {
+    // Use rear camera by default
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: currentFacingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        } 
+    }).then(function(stream) {
+        currentStream = stream;
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true); // required for iOS Safari
+        video.play();
+        requestAnimationFrame(tick);
         
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
-                });
-                video.srcObject = stream;
-                video.play();
-                requestAnimationFrame(tick);
-            } catch (error) {
-                resultDiv.innerHTML = `Error accessing camera: ${error}`;
-            }
-        }
+        // Show scanner frame after video loads
+        video.onloadedmetadata = function() {
+            document.getElementById('scannerFrame').style.display = 'block';
+            loadingMessage.classList.add('d-none');
+            canvasElement.classList.remove('d-none');
+        };
+    }).catch(function(err) {
+        loadingMessage.innerText = 'Error: ' + err.message;
+        console.error(err);
+    });
+}
 
-        function tick() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+function switchCamera() {
+    if (currentStream) {
+        // Stop all tracks in the current stream
+        currentStream.getTracks().forEach(track => {
+            track.stop();
+        });
+        
+        // Toggle facing mode
+        currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+        
+        // Get new stream with the opposite camera
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: currentFacingMode,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        }).then(function(stream) {
+            currentStream = stream;
+            video.srcObject = stream;
+            // Ensure the torch is turned off when switching cameras
+            document.getElementById('torchSwitch').checked = false;
+        }).catch(function(err) {
+            console.error('Error switching camera:', err);
+            Swal.fire({
+                title: 'Camera Error',
+                text: 'Failed to switch camera: ' + err.message,
+                icon: 'error',
+                confirmButtonColor: '#4361ee'
+            });
+        });
+    }
+}
+
+function toggleTorch() {
+    if (currentStream) {
+        const track = currentStream.getVideoTracks()[0];
+        
+        try {
+            const capabilities = track.getCapabilities();
+            // Check if torch is supported
+            if (capabilities.torch) {
+                track.applyConstraints({
+                    advanced: [{ torch: document.getElementById('torchSwitch').checked }]
+                }).catch(e => {
+                    console.error('Error toggling torch:', e);
+                });
+            } else {
+                Swal.fire({
+                    title: 'Not Supported',
+                    text: 'Torch is not supported on this device',
+                    icon: 'info',
+                    confirmButtonColor: '#4361ee'
+                });
+                document.getElementById('torchSwitch').checked = false;
+            }
+        } catch (err) {
+            console.error('Error accessing torch:', err);
+        }
+    }
+}
+
+function openImagePicker() {
+    document.getElementById('filePicker').click();
+}
+
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    
+    if (file) {
+        const img = new Image();
+        img.onload = function() {
+            const tempCanvas = document.createElement('canvas');
+            const tempContext = tempCanvas.getContext('2d');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            tempContext.drawImage(img, 0, 0, img.width, img.height);
+            
+            try {
+                const imageData = tempContext.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
                 const code = jsQR(imageData.data, imageData.width, imageData.height);
                 
                 if (code) {
-                    handleQRScan(code.data);
+                    handleQRCode(code.data);
+                } else {
+                    Swal.fire({
+                        title: 'No QR Code Found',
+                        text: 'The image does not contain a valid QR code',
+                        icon: 'error',
+                        confirmButtonColor: '#4361ee'
+                    });
                 }
+            } catch (err) {
+                console.error('QR code processing error:', err);
+                Swal.fire({
+                    title: 'Processing Error',
+                    text: 'Failed to process the image',
+                    icon: 'error',
+                    confirmButtonColor: '#4361ee'
+                });
             }
-            requestAnimationFrame(tick);
-        }
+        };
+        
+        img.onerror = function() {
+            Swal.fire({
+                title: 'Invalid Image',
+                text: 'Could not load the image',
+                icon: 'error',
+                confirmButtonColor: '#4361ee'
+            });
+        };
+        
+        img.src = URL.createObjectURL(file);
+    }
+}
 
-        async function handleQRScan(data) {
-            try {
-                const response = await fetch('/qr/validate-qr', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ uuid: data })
+function tick() {
+    if (!isScanning) {
+        // If scanning is paused, just schedule the next frame
+        requestAnimationFrame(tick);
+        return;
+    }
+    
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        // Draw video frame to canvas for processing
+        canvasElement.height = video.videoHeight;
+        canvasElement.width = video.videoWidth;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+        
+        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        if (code) {
+            // Check if we're in cooldown or if it's the same code we just scanned
+            if (scanCooldown || (lastScannedCode === code.data)) {
+                // Skip this code but continue scanning
+                requestAnimationFrame(tick);
+                return;
+            }
+            
+            // It's a new code or cooldown has expired
+            lastScannedCode = code.data;
+            
+            // Set cooldown to prevent multiple scans
+            scanCooldown = true;
+            isScanning = false; // Pause scanning while processing
+            
+            // Draw colored square around the QR code
+            drawQRHighlight(code.location);
+            
+            // Process the QR code data
+            handleQRCode(code.data);
+            return; // Stop processing frames once QR is found
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+function drawQRHighlight(location) {
+    // Draw outline
+    canvas.beginPath();
+    canvas.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
+    canvas.lineTo(location.topRightCorner.x, location.topRightCorner.y);
+    canvas.lineTo(location.bottomRightCorner.x, location.bottomRightCorner.y);
+    canvas.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
+    canvas.lineTo(location.topLeftCorner.x, location.topLeftCorner.y);
+    canvas.lineWidth = 4;
+    canvas.strokeStyle = "#4361ee";
+    canvas.stroke();
+}
+
+function handleQRCode(data) {
+    try {
+        // Play success sound
+        playBeepSound();
+        
+        // For demo purposes - in a real app, you would validate this against your API
+        validateQRWithAPI(data);
+    } catch (error) {
+        console.error('Error handling QR code:', error);
+        showErrorAlert('Failed to process QR code: ' + error.message);
+    }
+}
+
+function validateQRWithAPI(qrData) {
+    // Disable scanning while validating
+    isScanning = false;
+    
+    // Make an actual API call to validate the QR code
+    fetch('/qr/validate-qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uuid: qrData })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Server error: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // If we have submission data, use it. Otherwise, use placeholders.
+        if (data.submission) {
+            const submission = data.submission;
+            
+            // Get name from field_values
+            const firstName = submission.field_values.first_name || '';
+            const lastName = submission.field_values.last_name || '';
+            const fullName = firstName + ' ' + lastName;
+            
+            // Get email from field_values
+            const email = submission.field_values.email || 'No email provided';
+            
+            // Show success message using SweetAlert
+            Swal.fire({
+                title: 'Success!',
+                text: `${fullName} has been checked in successfully!`,
+                icon: 'success',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            }).then(() => {
+                // Add to recent scans
+                addToRecentScans({
+                    name: fullName,
+                    event: submission.form.title,
+                    time: new Date().toLocaleTimeString(),
+                    status: 'success'
                 });
                 
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message);
-                    window.location.href = '/';  // Redirect back to main page
-                } else {
-                    alert(`Error: ${result.detail}`);
-                }
-            } catch (error) {
-                alert(`Error: ${error}`);
-            }
+                // Reset cooldown after 3 seconds to prevent immediate rescanning
+                setTimeout(() => {
+                    scanCooldown = false;
+                    lastScannedCode = null; // Reset last scanned code
+                    isScanning = true; // Resume scanning
+                    requestAnimationFrame(tick);
+                }, 3000);
+            });
+        } else {
+            // Show appropriate message based on API response
+            Swal.fire({
+                title: data.success ? 'Success!' : 'Warning!',
+                text: data.message,
+                icon: data.success ? 'success' : 'warning',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            }).then(() => {
+                // Reset cooldown after 3 seconds to prevent immediate rescanning
+                setTimeout(() => {
+                    scanCooldown = false;
+                    lastScannedCode = null; // Reset last scanned code
+                    isScanning = true; // Resume scanning
+                    requestAnimationFrame(tick);
+                }, 3000);
+            });
         }
+    })
+    .catch(error => {
+        console.error('Error validating QR code:', error);
+        Swal.fire({
+            title: 'Error',
+            text: 'Failed to validate QR code: ' + error.message,
+            icon: 'error',
+            confirmButtonColor: '#4361ee'
+        }).then(() => {
+            // Reset scanning state after error
+            setTimeout(() => {
+                scanCooldown = false;
+                lastScannedCode = null; // Reset last scanned code
+                isScanning = true; // Resume scanning
+                requestAnimationFrame(tick);
+            }, 1000);
+        });
+    });
+}
 
-        initCamera();
-    </script>
-</body>
-</html>
+function displayScanResult(attendee) {
+    // Hide video and show result
+    video.classList.add('d-none');
+    canvasElement.classList.add('d-none');
+    document.getElementById('scannerFrame').style.display = 'none';
+    
+    // Update and show result card
+    const resultCard = document.getElementById('resultCard');
+    resultCard.classList.remove('d-none');
+    
+    // Set result details
+    document.getElementById('attendeeName').textContent = attendee.name;
+    document.getElementById('attendeeDetails').textContent = 'Email: ' + attendee.email;
+    document.getElementById('formName').textContent = 'Event: ' + attendee.event;
+}
+
+function resetScanner() {
+    // Reset scanning state
+    isScanning = true;
+    scanCooldown = false;
+    
+    // Hide results and show scanner
+    document.getElementById('resultCard').classList.add('d-none');
+    video.classList.remove('d-none');
+    canvasElement.classList.remove('d-none');
+    document.getElementById('scannerFrame').style.display = 'block';
+    
+    // Resume scanning
+    requestAnimationFrame(tick);
+}
+
+function viewDetails() {
+    // In a real app, this would navigate to a details page
+    Swal.fire({
+        title: 'Attendee Details',
+        html: `
+            <div class="text-start">
+                <p><strong>Name:</strong> ${document.getElementById('attendeeName').textContent}</p>
+                <p><strong>Email:</strong> ${document.getElementById('attendeeDetails').textContent.replace('Email: ', '')}</p>
+                <p><strong>Event:</strong> ${document.getElementById('formName').textContent.replace('Event: ', '')}</p>
+                <p><strong>Check-in Time:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+        `,
+        icon: 'info',
+        confirmButtonColor: '#4361ee'
+    });
+}
+
+function addToRecentScans(scan) {
+    // Get existing scans from localStorage
+    let recentScans = JSON.parse(localStorage.getItem('recentScans') || '[]');
+    
+    // Add new scan at the beginning
+    recentScans.unshift(scan);
+    
+    // Keep only the last 10 scans
+    if (recentScans.length > 10) {
+        recentScans = recentScans.slice(0, 10);
+    }
+    
+    // Save back to localStorage
+    localStorage.setItem('recentScans', JSON.stringify(recentScans));
+    
+    // Update the UI
+    updateRecentScansUI(recentScans);
+}
+
+function initRecentScans() {
+    const recentScans = JSON.parse(localStorage.getItem('recentScans') || '[]');
+    updateRecentScansUI(recentScans);
+}
+
+function updateRecentScansUI(scans) {
+    const scansList = document.getElementById('recentScans');
+    
+    if (scans.length === 0) {
+        scansList.innerHTML = `
+            <li class="list-group-item text-center text-muted py-5">
+                No recent scans
+            </li>
+        `;
+        return;
+    }
+    
+    scansList.innerHTML = '';
+    
+    scans.forEach(scan => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        
+        li.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">${scan.name}</h6>
+                    <small class="text-muted">${scan.event}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-${scan.status === 'success' ? 'success' : 'warning'} mb-1 d-block">
+                        ${scan.status === 'success' ? 'Checked In' : 'Error'}
+                    </span>
+                    <small class="text-muted">${scan.time}</small>
+                </div>
+            </div>
+        `;
+        
+        scansList.appendChild(li);
+    });
+}
+
+function clearScans() {
+    Swal.fire({
+        title: 'Clear Recent Scans?',
+        text: 'This will clear your scan history',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, clear it',
+        confirmButtonColor: '#4361ee',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem('recentScans');
+            initRecentScans();
+            
+            Swal.fire({
+                title: 'Cleared!',
+                text: 'Your scan history has been cleared',
+                icon: 'success',
+                confirmButtonColor: '#4361ee'
+            });
+        }
+    });
+}
+
+function playBeepSound() {
+    // Create a beep sound for successful scan
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 1800;
+    gainNode.gain.value = 0.1;
+    
+    oscillator.start(context.currentTime);
+    oscillator.stop(context.currentTime + 0.1);
+}
+
+function showErrorAlert(message) {
+    Swal.fire({
+        title: 'Error',
+        text: message,
+        icon: 'error',
+        confirmButtonColor: '#4361ee'
+    });
+}
+</script>
+{% endblock %}
