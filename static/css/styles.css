@@ -25,19 +25,19 @@ canvas {
     box-sizing: border-box !important;
 }
 
-/* Consolidated Root Variables with New Palette and Bootstrap Aliases */
+/* Consolidated Root Variables with Yellow Theme */
 :root {
-  /* New Custom Palette */
-  --custom-primary: #2A9D8F;       /* Teal */
-  --custom-primary-rgb: 42, 157, 143;
-  --custom-secondary: #E9C46A;     /* Yellow/Gold */
-  --custom-secondary-rgb: 233, 196, 106;
-  --custom-accent: #F4A261;        /* Sandy Orange */
-  --custom-accent-rgb: 244, 162, 97;
-  --custom-light: #F1FAEE;         /* Very light green/blue - for backgrounds */
-  --custom-dark: #264653;          /* Dark Slate Blue/Green - for text */
-  --custom-neutral: #A8DADC;       /* Light Cyan/Aqua - for borders, secondary text */
-  --custom-neutral-rgb: 168, 218, 220; /* Added for completeness */
+  /* Yellow Theme Palette */
+  --custom-primary: #FFD100;       /* Primary yellow */
+  --custom-primary-rgb: 255, 209, 0;
+  --custom-secondary: #F2A900;     /* Golden yellow */
+  --custom-secondary-rgb: 242, 169, 0;
+  --custom-accent: #FFAA00;        /* Amber */
+  --custom-accent-rgb: 255, 170, 0;
+  --custom-light: #FFFAEB;         /* Light cream/yellow for backgrounds */
+  --custom-dark: #44372F;          /* Dark brown for text */
+  --custom-neutral: #FFF5D6;       /* Light beige */
+  --custom-neutral-rgb: 255, 245, 214; /* Added for completeness */
   --custom-white: #FFFFFF;
   --custom-white-rgb: 255, 255, 255;
   --custom-black: #000000;
@@ -71,8 +71,8 @@ canvas {
   --bs-info-rgb: var(--custom-neutral-rgb);
   --bs-warning-rgb: var(--custom-accent-rgb);
   --bs-danger-rgb: 220, 53, 69;  /* Default Bootstrap danger red RGB */
-  --bs-light-rgb: 241, 250, 238; /* RGB for --custom-light */
-  --bs-dark-rgb: 38, 70, 83;    /* RGB for --custom-dark */
+  --bs-light-rgb: 255, 250, 235; /* RGB for --custom-light */
+  --bs-dark-rgb: 68, 55, 47;    /* RGB for --custom-dark */
   --bs-white-rgb: var(--custom-white-rgb);
   --bs-black-rgb: 0,0,0;
 
@@ -104,9 +104,9 @@ canvas {
 body {
   font-family: var(--font-main);
   line-height: 1.6;
-  color: var(--gray-800);
-  background-color: var(--gray-100);
-  background-image: linear-gradient(135deg, rgba(67, 97, 238, 0.03) 0%, rgba(76, 201, 240, 0.03) 100%);
+  color: var(--custom-dark);
+  background-color: var(--custom-light);
+  background-image: linear-gradient(135deg, rgba(255, 209, 0, 0.05) 0%, rgba(255, 170, 0, 0.05) 100%);
   background-attachment: fixed;
 }
 
@@ -130,7 +130,7 @@ h1::after {
   bottom: -10px;
   width: 50px;
   height: 4px;
-  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+  background: linear-gradient(90deg, var(--custom-primary), var(--custom-secondary));
   border-radius: 2px;
 }
 
@@ -165,8 +165,8 @@ h1::after {
 }
 
 .card-header {
-  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-  color: white;
+  background: linear-gradient(45deg, var(--custom-primary), var(--custom-secondary));
+  color: var(--custom-dark);
   font-weight: 600;
   padding: 1rem 1.25rem;
   border: none;

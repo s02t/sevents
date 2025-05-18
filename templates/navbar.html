@@ -5,7 +5,7 @@
       <span class="brand-logo me-2">
         <i class="bi bi-qr-code"></i>
       </span>
-      <span class="brand-text">EventQR</span>
+      <span class="brand-text">sevents</span>
     </a>
     
     <!-- Mobile toggle button -->
@@ -82,18 +82,28 @@
 
 <style>
 :root {
-  /* Modern Color Palette */
-  --primary-color: #4361ee;
-  --secondary-color: #3f37c9;
-  --accent-color: #4cc9f0;
-  --light-color: #f8f9fa;
-  --dark-color: #212529;
+  /* Yellow Theme Color Palette */
+  --primary-color: #FFD100; /* Primary yellow */
+  --secondary-color: #F2A900; /* Golden yellow */
+  --accent-color: #FFAA00; /* Amber */
+  --light-color: #FFFAEB; /* Light cream/yellow for backgrounds */
+  --dark-color: #44372F; /* Dark brown for text */
+  --neutral-color: #FFF5D6; /* Light beige */
 }
 
 /* Navbar Styling */
 .navbar {
-  background: linear-gradient(135deg, #4361ee, #3f37c9) !important;
+  background: linear-gradient(135deg, #FFD100, #F2A900) !important;
   padding: 0.75rem 0;
+  color: var(--dark-color);
+}
+
+.navbar-dark .navbar-nav .nav-link {
+  color: var(--dark-color);
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+  color: rgba(0, 0, 0, 0.7);
 }
 
 .brand-logo {
@@ -102,8 +112,9 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(68, 55, 47, 0.2);
   border-radius: 8px;
+  color: var(--dark-color);
 }
 
 .brand-logo i {
@@ -114,6 +125,7 @@
   font-weight: 700;
   font-size: 1.35rem;
   letter-spacing: -0.02em;
+  color: var(--dark-color);
 }
 
 .navbar-nav .nav-link {
@@ -121,10 +133,11 @@
   margin: 0 0.15rem;
   border-radius: 8px;
   transition: all 0.2s ease;
+  color: var(--dark-color);
 }
 
 .navbar-nav .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(68, 55, 47, 0.1);
 }
 
 .nav-link i {
@@ -142,17 +155,17 @@
   border: none;
   padding: 0.5rem 1rem;
   padding-right: 42px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(68, 55, 47, 0.15);
   border-radius: 8px;
-  color: #fff;
+  color: var(--dark-color);
 }
 
 .search-box .form-control::placeholder {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(68, 55, 47, 0.7);
 }
 
 .search-box .form-control:focus {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(68, 55, 47, 0.25);
   box-shadow: none;
 }
 
@@ -163,26 +176,26 @@
   height: 100%;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(68, 55, 47, 0.7);
   padding: 0 12px;
 }
 
 .btn-search:hover {
-  color: #fff;
+  color: var(--dark-color);
 }
 
 /* User Button */
 .btn-user {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: white;
+  background-color: rgba(68, 55, 47, 0.15);
+  color: var(--dark-color);
   border-radius: 8px;
   padding: 0.5rem 1rem;
   border: none;
 }
 
 .btn-user:hover, .btn-user:focus {
-  background-color: rgba(255, 255, 255, 0.25);
-  color: white;
+  background-color: rgba(68, 55, 47, 0.25);
+  color: var(--dark-color);
 }
 
 /* Dropdown Menu */
@@ -203,8 +216,8 @@
 }
 
 .dropdown-item:hover {
-  background-color: rgba(67, 97, 238, 0.1);
-  color: var(--primary-color);
+  background-color: rgba(255, 209, 0, 0.1);
+  color: var(--dark-color);
 }
 
 .dropdown-divider {
@@ -220,5 +233,14 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Fix for dark mode navbar */
+.navbar-dark .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2868, 55, 47, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+.navbar-dark .navbar-toggler {
+  border-color: rgba(68, 55, 47, 0.3);
 }
 </style>

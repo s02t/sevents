@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/form">Events</a></li>
+                    <li class="breadcrumb-item"><a href="/form/forms/{{ submission.form_id }}">{{ submission.form.title }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Attendee Details</li>
+                </ol>
+            </nav>
+            <h1 class="display-6 mb-0">Attendee Information</h1>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="btn-group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button class="dropdown-item" onclick="exportToPDF()"><i class="bi bi-filetype-pdf me-2"></i> PDF</button></li>
+                    <li><button class="dropdown-item" onclick="printProfile()"><i class="bi bi-printer me-2"></i> Print</button></li>
+                </ul>
+            </div>
+            <a href="/form/forms/{{ submission.form_id }}" class="btn btn-outline-primary ms-2">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Info Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="avatar-container mx-auto mb-3">
+                        <div class="avatar bg-primary text-white">
+                            {{ submission.field_values.first_name[0] }}{{ submission.field_values.last_name[0] }}
+                        </div>
+                    </div>
+                    <h3 class="card-title mb-1">{{ submission.field_values.first_name }} {{ submission.field_values.last_name }}</h3>
+                    
+                    <!-- Status Badge -->
+                    <span class="badge bg-{% if submission.qr_code.status %}success{% else %}warning{% endif %} mb-3">
+                        {% if submission.qr_code.status %}Checked In{% else %}Pending{% endif %}
+                    </span>
+                    
+                    <!-- Contact Info -->
+                    <div class="contact-info mt-3 text-start">
+                        {% if submission.field_values.email %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-envelope me-2 text-primary"></i>
+                            <a href="mailto:{{ submission.field_values.email }}">{{ submission.field_values.email }}</a>
+                        </div>
+                        {% endif %}
+                        
+                        {% if submission.field_values.phone %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-telephone me-2 text-primary"></i>
+                            <a href="tel:{{ submission.field_values.phone }}">{{ submission.field_values.phone }}</a>
+                        </div>
+                        {% endif %}
+                        
+                        {% if submission.field_values.organization or submission.field_values.company %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-building me-2 text-primary"></i>
+                            <span>{{ submission.field_values.organization or submission.field_values.company }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-calendar-check me-2 text-primary"></i>
+                            <span>Registered: {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                        
+                        {% if submission.qr_code.status and submission.qr_code.checked_in_at %}
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle me-2 text-success"></i>
+                            <span>Checked in: {{ submission.qr_code.checked_in_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="mt-4">
+                        <button class="btn btn-primary w-100 mb-2" 
+                                onclick="toggleStatus('{{ submission.id }}', '{{ submission.qr_code.status|lower }}')">
+                            <i class="bi bi-{% if submission.qr_code.status %}x-circle{% else %}check-circle{% endif %} me-1"></i>
+                            {% if submission.qr_code.status %}Mark as Pending{% else %}Check In{% endif %}
+                        </button>
+                        <button class="btn btn-outline-danger w-100" 
+                                onclick="confirmDelete('{{ submission.id }}')">
+                            <i class="bi bi-trash me-1"></i> Delete Registration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Registration Details -->
+        <div class="col-md-8">
+            <!-- QR Code Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-qr-code me-2"></i> QR Code</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <img src="/qr/qr-codes/{{ submission.qr_code.uuid }}.png" 
+                                 class="img-fluid qr-large" 
+                                 style="max-width: 200px;"
+                                 alt="QR Code">
+                        </div>
+                        <div class="col-md-6 text-md-start">
+                            <p>UUID: <span class="text-monospace">{{ submission.qr_code.uuid }}</span></p>
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-outline-primary" onclick="downloadQR('{{ submission.qr_code.uuid }}', '{{ submission.field_values.first_name }}-{{ submission.field_values.last_name }}')">
+                                    <i class="bi bi-download me-1"></i> Download QR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- All Registration Fields -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i> Registration Details</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        {% for field in fields %}
+                        <div class="col-md-6 mb-3">
+                            <div class="form-field">
+                                <label class="form-label text-muted">{{ field.label }}</label>
+                                <div class="field-value">
+                                    {% if submission.field_values[field.field_name] %}
+                                        {% if field.field_type == 'checkbox' %}
+                                            {% if submission.field_values[field.field_name] == 'yes' %}
+                                                <i class="bi bi-check-circle-fill text-success"></i> Yes
+                                            {% else %}
+                                                <i class="bi bi-x-circle text-danger"></i> No
+                                            {% endif %}
+                                        {% else %}
+                                            {{ submission.field_values[field.field_name] }}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Not provided</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-container {
+    width: 100px;
+    height: 100px;
+    position: relative;
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 600;
+}
+
+.form-field {
+    margin-bottom: 15px;
+}
+
+.form-field label {
+    font-size: 0.85rem;
+    margin-bottom: 3px;
+    display: block;
+}
+
+.field-value {
+    font-weight: 500;
+}
+
+.text-monospace {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875em;
+    color: #495057;
+}
+
+.qr-large {
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 8px;
+}
+</style>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+// Download QR code
+function downloadQR(uuid, name) {
+    const link = document.createElement('a');
+    link.href = `/qr/qr-codes/${uuid}.png`;
+    link.download = `qr-${name.replace(/\s+/g, '-')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Toggle check-in status
+function toggleStatus(id, currentStatus) {
+    // Convert currentStatus from string to boolean if needed
+    const isCurrentlyCheckedIn = currentStatus === 'true';
+    
+    Swal.fire({
+        title: isCurrentlyCheckedIn ? 'Mark as Pending?' : 'Check In Attendee?',
+        text: isCurrentlyCheckedIn ? 'This will revert the check-in status' : 'This will mark the attendee as checked in',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, update',
+        confirmButtonColor: '#4361ee',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading indicator
+            Swal.fire({
+                title: 'Processing...',
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false
+            });
+            
+            // Make API call to toggle status
+            fetch(`/form/submissions/${id}/toggle-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Updated!',
+                        text: `Status changed to ${data.status ? 'Checked In' : 'Pending'}`,
+                        icon: 'success',
+                        confirmButtonColor: '#4361ee'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to update status');
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling status:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Failed to update status. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#ef476f'
+                });
+            });
+        }
+    });
+}
+
+// Confirm deletion
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Delete Registration?',
+        text: "This action cannot be undone!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it',
+        confirmButtonColor: '#dc3545',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Here you would make an API call to delete the submission
+            window.location.href = `/form/forms/${submissionFormId}`;
+        }
+    });
+}
+
+// Export to PDF
+function exportToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Get attendee details
+    const name = '{{ submission.field_values.first_name }} {{ submission.field_values.last_name }}';
+    const event = '{{ submission.form.title }}';
+    const email = '{{ submission.field_values.email }}';
+    const phone = '{{ submission.field_values.phone }}';
+    const status = '{{ "Checked In" if submission.qr_code.status else "Pending" }}';
+    const regDate = '{{ submission.submitted_at.strftime("%Y-%m-%d %H:%M") }}';
+    
+    // Add header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Attendee Details', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(event, 14, 30);
+    
+    // Add attendee information
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Personal Information', 14, 45);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Name: ${name}`, 14, 55);
+    doc.text(`Email: ${email}`, 14, 62);
+    if (phone) {
+        doc.text(`Phone: ${phone}`, 14, 69);
+    }
+    
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Registration Information', 14, 85);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Registration Date: ${regDate}`, 14, 95);
+    doc.text(`Status: ${status}`, 14, 102);
+    
+    // Add all field values
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('All Registration Fields', 14, 120);
+    
+    // Add all field values in a table format
+    let y = 130;
+    {% for field in fields %}
+    if (y > 270) {
+        doc.addPage();
+        y = 20;
+    }
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('{{ field.label }}:', 14, y);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text('{{ submission.field_values[field.field_name] or "Not provided" }}', 70, y);
+    
+    y += 8;
+    {% endfor %}
+    
+    // Save the PDF
+    doc.save('{{ submission.field_values.first_name }}-{{ submission.field_values.last_name }}-details.pdf');
+}
+
+// Print profile
+function printProfile() {
+    window.print();
+}
+
+// Set form ID for delete operation
+const submissionFormId = {{ submission.form_id }};
+</script>
+{% endblock %} 

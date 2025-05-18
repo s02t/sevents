@@ -466,3 +466,52 @@ async def get_public_link(form_id: int, db: db_dependency):
         raise HTTPException(status_code=404, detail="Form not found")
     
     return {"url": f"/submission/create/{form.hash_id}"}
+
+@router.get("/submissions/{submission_id}", response_class=HTMLResponse, dependencies=[Depends(get_admin_user)])
+async def view_attendee_details(
+    request: Request,
+    submission_id: int,
+    db: Session = Depends(get_db)
+):
+    """View detailed information for a specific attendee/submission"""
+    
+    # Get the submission with related data
+    submission = db.query(Submission).filter(Submission.id == submission_id).options(
+        joinedload(Submission.form),
+        joinedload(Submission.qr_code)
+    ).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Get the form fields to display submission data properly
+    fields = db.query(FormField).filter(FormField.form_id == submission.form_id).order_by(FormField.order).all()
+    
+    return templates.TemplateResponse("attendee-details.html", {
+        "request": request,
+        "submission": submission,
+        "fields": fields,
+        "forms": db.query(FormModel).all()  # For navbar
+    })
+
+@router.get("/forms/{form_id}/fields", dependencies=[Depends(get_admin_user)])
+async def get_form_fields(
+    form_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all fields for a form, used for full data exports"""
+    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    
+    return {
+        "fields": [
+            {
+                "id": field.id,
+                "field_name": field.field_name,
+                "field_type": field.field_type,
+                "label": field.label,
+                "required": field.required,
+                "order": field.order
+            }
+            for field in fields
+        ]
+    }

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>EventQR</title>
+    <title>sevents</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap">
@@ -11,13 +11,13 @@
     <link rel="stylesheet" type="text/css" href="{{url_for('static', path='/css/styles.css')}}">
     <style>
         :root {
-            /* Modern Color Palette */
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --accent-color: #4cc9f0;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --neutral-color: #e9ecef;
+            /* Yellow Theme Color Palette */
+            --primary-color: #FFD100; /* Primary yellow */
+            --secondary-color: #F2A900; /* Golden yellow */
+            --accent-color: #FFAA00; /* Amber */
+            --light-color: #FFFAEB; /* Light cream/yellow for backgrounds */
+            --dark-color: #44372F; /* Dark brown for text */
+            --neutral-color: #FFF5D6; /* Light beige */
             --success-color: #4caf50;
             --warning-color: #ff9e00;
             --danger-color: #f72585;
@@ -30,8 +30,8 @@
         
         body {
             font-family: var(--font-main);
-            background-color: #f5f7fa;
-            background-image: linear-gradient(135deg, rgba(67, 97, 238, 0.03) 0%, rgba(76, 201, 240, 0.03) 100%);
+            background-color: var(--light-color);
+            background-image: linear-gradient(135deg, rgba(255, 209, 0, 0.05) 0%, rgba(255, 170, 0, 0.05) 100%);
             background-attachment: fixed;
             min-height: 100vh;
             display: flex;
@@ -74,13 +74,15 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #4361ee, #3f37c9);
-            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.25);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 4px 10px rgba(255, 209, 0, 0.25);
+            color: var(--dark-color);
         }
         
         .btn-primary:hover {
-            background: linear-gradient(135deg, #3f37c9, #2b0b98);
-            box-shadow: 0 6px 15px rgba(67, 97, 238, 0.3);
+            background: linear-gradient(135deg, var(--secondary-color), #E09600);
+            box-shadow: 0 6px 15px rgba(255, 209, 0, 0.3);
+            color: var(--dark-color);
         }
         
         /* Form Controls */
@@ -93,13 +95,13 @@
         
         .form-control:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+            box-shadow: 0 0 0 0.25rem rgba(255, 209, 0, 0.25);
         }
         
         /* Custom Markdown Content Styling */
         .markdown-content {
             line-height: 1.7;
-            color: #495057;
+            color: var(--dark-color);
         }
         
         .markdown-content h1, .markdown-content h2, .markdown-content h3, 
@@ -122,7 +124,7 @@
             border-left: 4px solid var(--primary-color);
             padding: 0.5rem 0 0.5rem 1.25rem;
             margin-bottom: 1.25rem;
-            background-color: rgba(67, 97, 238, 0.05);
+            background-color: rgba(255, 209, 0, 0.05);
             border-radius: 0 8px 8px 0;
         }
         
@@ -150,14 +152,14 @@
         }
         
         .markdown-content a {
-            color: var(--primary-color);
+            color: var(--secondary-color);
             text-decoration: none;
             transition: all 0.2s ease;
             font-weight: 500;
         }
         
         .markdown-content a:hover {
-            color: var(--secondary-color);
+            color: var(--accent-color);
             text-decoration: underline;
         }
     </style>
@@ -174,7 +176,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-6 text-center text-md-start">
-                    <p class="mb-0 text-muted">© 2024 EventQR. All rights reserved.</p>
+                    <p class="mb-0 text-muted">© 2024 sevents. All rights reserved.</p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
                     <ul class="list-inline mb-0">

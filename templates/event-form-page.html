@@ -132,8 +132,14 @@
                     <i class="bi bi-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><button class="dropdown-item" onclick="exportToCSV()"><i class="bi bi-filetype-csv me-2"></i> CSV</button></li>
-                    <li><button class="dropdown-item" onclick="exportToPDF()"><i class="bi bi-filetype-pdf me-2"></i> PDF</button></li>
+                    <li><h6 class="dropdown-header">CSV Format</h6></li>
+                    <li><button class="dropdown-item" onclick="exportToCSV(false)"><i class="bi bi-filetype-csv me-2"></i> Standard CSV</button></li>
+                    <li><button class="dropdown-item" onclick="exportToCSV(true)"><i class="bi bi-filetype-csv me-2"></i> Full Data CSV</button></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header">PDF Format</h6></li>
+                    <li><button class="dropdown-item" onclick="exportToPDF(false)"><i class="bi bi-filetype-pdf me-2"></i> Standard PDF</button></li>
+                    <li><button class="dropdown-item" onclick="exportToPDF(true)"><i class="bi bi-filetype-pdf me-2"></i> Full Data PDF</button></li>
+                    <li><button class="dropdown-item" onclick="exportDetailedPDF()"><i class="bi bi-filetype-pdf me-2"></i> Detailed PDF (1 attendee per page)</button></li>
                 </ul>
             </div>
         </div>
@@ -431,7 +437,10 @@
                     </thead>
                     <tbody>
                         {% for item in submissions %}
-                        <tr data-status="{{ item.qr_code.status|lower }}" class="submission-row">
+                        <tr data-status="{{ item.qr_code.status|lower }}" 
+                            data-submission-id="{{ item.id }}"
+                            data-field-values='{{ item.field_values|tojson }}'
+                            class="submission-row">
                             <th scope="row">{{ loop.index }}</th>
                             <td>
                                 <img src="/qr/qr-codes/{{ item.qr_code.uuid }}.png" 
@@ -459,6 +468,9 @@
                             </td>
                             <td>
                                 <div class="btn-group">
+                                    <a href="/form/submissions/{{ item.id }}" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-info-circle"></i>
+                                    </a>
                                     <button class="btn btn-sm btn-outline-primary" 
                                             onclick="toggleStatus('{{ item.id }}', '{{ item.qr_code.status|lower }}')">
                                         <i class="bi bi-{% if item.qr_code.status %}x-circle{% else %}check-circle{% endif %}"></i>
@@ -554,6 +566,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Set current form ID for API calls
+const currentFormId = {{ current_form.id }};
+
 // Calculate stats
 document.addEventListener('DOMContentLoaded', function() {
     updateStats();
@@ -1048,7 +1063,7 @@ function generateBadgesPDF() {
 }
 
 // Export to CSV
-function exportToCSV() {
+function exportToCSV(fullData = false) {
     // Get all visible rows (respecting filters)
     const rows = document.querySelectorAll('tr.submission-row:not([style*="display: none"])');
     
@@ -1064,30 +1079,59 @@ function exportToCSV() {
     // Prepare CSV content
     let csv = [];
     
-    // Add header row - include check-in time
-    const headers = ['#', 'Name', 'Email', 'Submitted At', 'Check-in Time', 'Status'];
+    // Get all form fields for full export
+    const allFormFields = [];
+    
+    if (fullData) {
+        // Make an API call to get all fields (or you could embed them in the template)
+        fetch(`/form/forms/${currentFormId}/fields`)
+            .then(response => response.json())
+            .then(data => {
+                const fields = data.fields;
+                // Call helper function after getting fields
+                generateAndDownloadCSV(rows, fields);
+            })
+            .catch(error => {
+                console.error('Error fetching fields:', error);
+                // Fallback to standard export if field fetching fails
+                generateAndDownloadCSV(rows, []);
+            });
+    } else {
+        // Standard export without field fetching
+        generateAndDownloadCSV(rows, []);
+    }
+}
+
+// Helper function to generate and download CSV
+function generateAndDownloadCSV(rows, fields) {
+    let csv = [];
+    const fullData = fields.length > 0;
+    
+    // Add header row
+    let headers = ['#', 'Name', 'Email', 'Submitted At', 'Check-in Time', 'Status'];
+    
+    // Add additional field headers for full export
+    if (fullData) {
+        fields.forEach(field => {
+            headers.push(field.label);
+        });
+    }
+    
     csv.push(headers.join(','));
     
-    // Add data rows
+    // Data rows
     rows.forEach((row, index) => {
-        // Get all cells including th and td elements
         const allCells = row.children;
+        const submissionId = row.getAttribute('data-submission-id');
         
-        // Index 0 is the # column (th element)
-        // Index 1 is QR Code column (td element)
-        // Index 2 is Name column (td element)
-        // Index 3 is Email column (td element)
-        // Index 4 is Submission Date column (td element)
-        // Index 5 is Check-in Time column (td element)
-        // Index 6 is Status column (td element)
-        
+        // Basic data
         const name = allCells[2].textContent.trim();
         const email = allCells[3].textContent.trim();
         const submissionDate = allCells[4].textContent.trim();
         const checkinTime = allCells[5].textContent.trim();
         const status = allCells[6].textContent.trim();
         
-        const rowData = [
+        let rowData = [
             index + 1,
             `"${name}"`,
             `"${email}"`,
@@ -1095,6 +1139,23 @@ function exportToCSV() {
             `"${checkinTime}"`,
             `"${status}"`
         ];
+        
+        // For full export, add field values
+        if (fullData && row.hasAttribute('data-field-values')) {
+            try {
+                const fieldValues = JSON.parse(row.getAttribute('data-field-values'));
+                
+                fields.forEach(field => {
+                    const value = fieldValues[field.field_name] || '';
+                    rowData.push(`"${value}"`);
+                });
+            } catch (e) {
+                console.error('Error parsing field values:', e);
+                // Add empty values if parsing fails
+                fields.forEach(() => rowData.push('""'));
+            }
+        }
+        
         csv.push(rowData.join(','));
     });
     
@@ -1107,9 +1168,10 @@ function exportToCSV() {
     const link = document.createElement('a');
     const eventTitle = document.querySelector('h2').textContent.trim();
     const now = new Date().toISOString().slice(0, 10);
+    const fileType = fullData ? 'full' : 'standard';
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `${eventTitle}-registrations-${now}.csv`);
+    link.setAttribute('download', `${eventTitle}-registrations-${fileType}-${now}.csv`);
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
@@ -1357,7 +1419,7 @@ function delete_item(id) {
 }
 
 // Export to PDF with Excel-like styling
-function exportToPDF() {
+function exportToPDF(fullData = false) {
     // Get all visible rows (respecting filters)
     const rows = document.querySelectorAll('tr.submission-row:not([style*="display: none"])');
     
@@ -1370,14 +1432,56 @@ function exportToPDF() {
         return;
     }
     
+    // For full data export, we need to fetch field definitions
+    if (fullData) {
+        // Show loading indicator
+        Swal.fire({
+            title: 'Preparing Full Export...',
+            text: 'Gathering all registration data',
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false
+        });
+        
+        // Make an API call to get all fields
+        fetch(`/form/forms/${currentFormId}/fields`)
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                const fields = data.fields;
+                // Call helper function after getting fields
+                generateAndDownloadPDF(rows, fields);
+            })
+            .catch(error => {
+                console.error('Error fetching fields:', error);
+                Swal.close();
+                // Fallback to standard export if field fetching fails
+                generateAndDownloadPDF(rows, []);
+            });
+    } else {
+        // Standard export without field fetching
+        generateAndDownloadPDF(rows, []);
+    }
+}
+
+// Helper function to generate and download PDF
+function generateAndDownloadPDF(rows, fields) {
+    const fullData = fields.length > 0;
+    
     // Create PDF document
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+        orientation: fullData ? 'landscape' : 'portrait'
+    });
     
     // Get event details
     const eventTitle = document.querySelector('h2').textContent.trim();
     const totalRegistrations = document.querySelector('.badge').textContent.trim();
     const today = new Date().toLocaleDateString();
+    const exportType = fullData ? 'Full Data Export' : 'Standard Export';
     
     // Add event header
     doc.setFontSize(18);
@@ -1385,13 +1489,24 @@ function exportToPDF() {
     
     doc.setFontSize(11);
     doc.setTextColor(100, 100, 100);
-    doc.text(`${totalRegistrations} • Generated on ${today}`, 14, 30);
+    doc.text(`${totalRegistrations} • ${exportType} • Generated on ${today}`, 14, 30);
+    
+    // Prepare table data and headers
+    let headers = ['#', 'Name', 'Email', 'Submitted At', 'Check-in Time', 'Status'];
+    
+    // Add additional field headers for full export
+    if (fullData) {
+        fields.forEach(field => {
+            headers.push(field.label);
+        });
+    }
     
     // Prepare table data
     const tableData = [];
     rows.forEach((row, index) => {
         // Get all cells including th and td elements
         const allCells = row.children;
+        const submissionId = row.getAttribute('data-submission-id');
         
         // Extract data properly from each cell
         const name = allCells[2].textContent.trim();
@@ -1400,27 +1515,102 @@ function exportToPDF() {
         const checkinTime = allCells[5].textContent.trim();
         const status = allCells[6].textContent.trim();
         
-        tableData.push([
+        // Basic data row
+        let rowData = [
             index + 1, 
             name,
             email,
             submissionDate,
             checkinTime,
             status
-        ]);
+        ];
+        
+        // For full export, add field values from data attribute
+        if (fullData && row.hasAttribute('data-field-values')) {
+            try {
+                const fieldValues = JSON.parse(row.getAttribute('data-field-values'));
+                
+                fields.forEach(field => {
+                    // Get the value or empty string
+                    let value = fieldValues[field.field_name] || '';
+                    
+                    // Handle different field types appropriately
+                    if (field.field_type === 'textarea') {
+                        // For textarea, limit length and preserve some formatting
+                        value = String(value).substring(0, 200); // Limit to first 200 chars
+                        if (value.length === 200) value += '...';
+                    } else if (field.field_type === 'checkbox') {
+                        // For checkbox, convert to Yes/No
+                        value = value === 'yes' ? 'Yes' : 'No';
+                    } else if (value.length > 50) {
+                        // For any other field with long text
+                        value = value.substring(0, 47) + '...';
+                    }
+                    
+                    rowData.push(value);
+                });
+            } catch (e) {
+                console.error('Error parsing field values:', e);
+                // Add empty values if parsing fails
+                fields.forEach(() => rowData.push(''));
+            }
+        }
+        
+        tableData.push(rowData);
     });
+    
+    // Calculate column styles based on export type
+    const columnStyles = {
+        0: { // # column
+            halign: 'center',
+            cellWidth: 15
+        }
+    };
+    
+    // For standard export, set status column style
+    if (!fullData) {
+        columnStyles[5] = { // Status column
+            halign: 'center'
+        };
+    }
+    
+    // Handle long text fields by setting max widths
+    const maxColumnWidth = fullData ? 25 : 40; // Smaller width when many columns
+    
+    // For full data export, limit column widths and handle text overflow
+    if (fullData) {
+        // For standard columns (index 0-5)
+        for (let i = 0; i <= 5; i++) {
+            columnStyles[i] = {
+                ...columnStyles[i],
+                cellWidth: i === 0 ? 10 : 20 // Make standard columns narrower
+            };
+        }
+        
+        // For custom fields (index 6+)
+        for (let i = 6; i < headers.length; i++) {
+            columnStyles[i] = {
+                cellWidth: 30,
+                overflow: 'linebreak'
+            };
+        }
+    }
     
     // Add table to PDF
     doc.autoTable({
-        head: [['#', 'Name', 'Email', 'Submitted At', 'Check-in Time', 'Status']],
+        head: [headers],
         body: tableData,
         startY: 40,
         theme: 'grid',
         styles: {
             font: 'helvetica',
-            fontSize: 9,
+            fontSize: 8, // Smaller font for full data
             lineColor: [220, 220, 220],
             lineWidth: 0.1,
+            overflow: 'linebreak', // Allow text to wrap
+            cellWidth: 'auto',
+            minCellHeight: 10,
+            cellPadding: 2
         },
         headStyles: {
             fillColor: [66, 139, 202],
@@ -1431,18 +1621,19 @@ function exportToPDF() {
         alternateRowStyles: {
             fillColor: [245, 245, 245]
         },
-        columnStyles: {
-            0: { // # column
-                halign: 'center',
-                cellWidth: 15
-            },
-            5: { // Status column
-                halign: 'center'
+        columnStyles: columnStyles,
+        // Advanced text handling for all cells
+        didParseCell: function(data) {
+            // Truncate long text for better display
+            if (data.cell.text && typeof data.cell.text === 'string' && data.cell.text.length > 100) {
+                data.cell.text = data.cell.text.substring(0, 97) + '...';
+            } else if (Array.isArray(data.cell.text) && data.cell.text[0] && data.cell.text[0].length > 100) {
+                data.cell.text[0] = data.cell.text[0].substring(0, 97) + '...';
             }
         },
         didDrawCell: function(data) {
-            // Add custom styling for status badges
-            if (data.section === 'body' && data.column.index === 5) {
+            // Add custom styling for status badges (only in standard export)
+            if (!fullData && data.section === 'body' && data.column.index === 5) {
                 const cell = data.cell;
                 const text = cell.text[0];
                 
@@ -1486,8 +1677,334 @@ function exportToPDF() {
     }
     
     // Generate and download the PDF
-    const filename = `${eventTitle.replace(/\s+/g, '-')}-registrations.pdf`;
+    const fileType = fullData ? 'full' : 'standard';
+    const filename = `${eventTitle.replace(/\s+/g, '-')}-registrations-${fileType}.pdf`;
     doc.save(filename);
+}
+
+// Generate a detailed PDF report with one attendee per page
+function exportDetailedPDF() {
+    // Get all visible rows (respecting filters)
+    const rows = document.querySelectorAll('tr.submission-row:not([style*="display: none"])');
+    
+    if (rows.length === 0) {
+        Swal.fire({
+            title: 'No Data',
+            text: 'There is no data to export.',
+            icon: 'info'
+        });
+        return;
+    }
+    
+    // Show loading indicator for longer process
+    Swal.fire({
+        title: 'Preparing Detailed Export...',
+        text: 'Creating comprehensive report',
+        didOpen: () => {
+            Swal.showLoading();
+        },
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false
+    });
+    
+    // Get fields for all submissions
+    fetch(`/form/forms/${currentFormId}/fields`)
+        .then(response => response.json())
+        .then(data => {
+            const fields = data.fields;
+            generateDetailedPDF(rows, fields);
+            Swal.close();
+        })
+        .catch(error => {
+            console.error('Error fetching fields:', error);
+            Swal.close();
+            Swal.fire({
+                title: 'Error',
+                text: 'Could not fetch field data. Please try again.',
+                icon: 'error'
+            });
+        });
+}
+
+// Helper function to create detailed PDF (one page per attendee)
+function generateDetailedPDF(rows, fields) {
+    // Create PDF document
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Get event details
+    const eventTitle = document.querySelector('h2').textContent.trim();
+    const totalRegistrations = rows.length;
+    const today = new Date().toLocaleDateString();
+    
+    // Process each submission - one per page
+    rows.forEach((row, index) => {
+        // Add a new page for each submission after the first
+        if (index > 0) {
+            doc.addPage();
+        }
+        
+        // Extract basic data
+        const allCells = row.children;
+        const name = allCells[2].textContent.trim();
+        const email = allCells[3].textContent.trim();
+        const submissionDate = allCells[4].textContent.trim();
+        const checkinTime = allCells[5].textContent.trim();
+        const statusText = allCells[6].textContent.trim();
+        const status = row.getAttribute('data-status') === 'true';
+        
+        // Page header with event info
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(eventTitle, 14, 20);
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Attendee #${index + 1} of ${totalRegistrations} • ${today}`, 14, 28);
+        
+        // Attendee section with basic info
+        doc.setFillColor(240, 240, 245);
+        doc.rect(14, 34, 182, 30, 'F');
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${name}`, 20, 44);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Email: ${email}`, 20, 52);
+        doc.text(`Registration Date: ${submissionDate}`, 20, 58);
+        
+        // Status badge
+        if (status) {
+            doc.setFillColor(40, 167, 69);
+            doc.setTextColor(255);
+            doc.roundedRect(140, 39, 50, 10, 2, 2, 'F');
+            doc.text('CHECKED IN', 165, 46, { align: 'center' });
+            doc.text(`Time: ${checkinTime}`, 165, 54, { align: 'center' });
+        } else {
+            doc.setFillColor(255, 193, 7);
+            doc.setTextColor(33, 37, 41);
+            doc.roundedRect(140, 39, 50, 10, 2, 2, 'F');
+            doc.text('PENDING', 165, 46, { align: 'center' });
+        }
+        doc.setTextColor(0);
+        
+        // All registration fields
+        try {
+            if (row.hasAttribute('data-field-values')) {
+                const fieldValues = JSON.parse(row.getAttribute('data-field-values'));
+                
+                                 // Section title for registration data
+                 doc.setFontSize(12);
+                 doc.setFont('helvetica', 'bold');
+                 doc.text('Registration Information', 14, 75);
+                 
+                 // Create a special array for extremely long answers to display separately
+                 const longTextFields = [];
+                 
+                 let y = 85; // Starting Y position for fields
+                 const leftColX = 20;
+                 const rightColX = 110;
+                 let useRightColumn = false;
+                 let currentPage = 1;
+                
+                fields.forEach((field, fieldIndex) => {
+                    // Start using right column after half the fields
+                    if (fieldIndex === Math.ceil(fields.length / 2)) {
+                        useRightColumn = true;
+                        y = 85; // Reset Y position for right column
+                    }
+                    
+                    const colX = useRightColumn ? rightColX : leftColX;
+                    const value = fieldValues[field.field_name] || 'Not provided';
+                    
+                    // Field label
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`${field.label}:`, colX, y);
+                    
+                    // Field value - handle different types differently
+                    doc.setFont('helvetica', 'normal');
+                    
+                                         if (field.field_type === 'textarea' || value.length > 80) {
+                         // For text areas or any long text, handle with special care
+                         // Use a more narrow column width for proper wrapping
+                         const maxWidth = useRightColumn ? 80 : 80;
+                         const lines = doc.splitTextToSize(value, maxWidth);
+                         
+                         // Calculate how many lines we can show before needing a new page
+                         const maxLinesBeforeNewPage = Math.min(Math.floor((260 - y) / 5), 30);
+                         
+                         // If the text is extremely long, dedicate a full section/page to it
+                         if (lines.length > 20) {
+                             // Add a note that we're showing this in detail
+                             doc.text(`[Long text - showing in full below]`, colX, y + 4);
+                             
+                             // Move to a new page or column if needed
+                             if (y > 200) {
+                                 if (!useRightColumn) {
+                                     useRightColumn = true;
+                                     y = 85;
+                                 } else {
+                                     doc.addPage();
+                                     y = 40;
+                                     useRightColumn = false;
+                                 }
+                                 
+                                 // Add field label again on the new page/column
+                                 doc.setFontSize(10);
+                                 doc.setFont('helvetica', 'bold');
+                                 doc.text(`${field.label} (continued):`, colX, y);
+                                 y += 8;
+                             } else {
+                                 y += 10;
+                             }
+                             
+                             // Show the text in full, adding pages as needed
+                             let lineIndex = 0;
+                             while (lineIndex < lines.length) {
+                                 // Calculate how many lines we can fit on this page
+                                 const remainingSpace = 260 - y;
+                                 const linesPerPage = Math.floor(remainingSpace / 5);
+                                 const linesToShow = Math.min(linesPerPage, lines.length - lineIndex);
+                                 
+                                 // Show the lines
+                                 doc.setFontSize(9);
+                                 doc.setFont('helvetica', 'normal');
+                                 
+                                 for (let i = 0; i < linesToShow; i++) {
+                                     doc.text(lines[lineIndex + i], colX, y + (i * 5));
+                                 }
+                                 
+                                 lineIndex += linesToShow;
+                                 
+                                 // If we have more lines to show, add a new page
+                                 if (lineIndex < lines.length) {
+                                     doc.addPage();
+                                     y = 20;
+                                     
+                                     // Add continuation header
+                                     doc.setFontSize(10);
+                                     doc.setFont('helvetica', 'bold');
+                                     doc.text(`${field.label} (continued):`, 14, y);
+                                     y += 10;
+                                     colX = 20; // Reset to left column on new page
+                                     useRightColumn = false;
+                                 } else {
+                                     y += linesToShow * 5 + 5; // Add some extra space after text
+                                 }
+                             }
+                         } else {
+                             // For medium-length text (under 20 lines)
+                             // Show what fits, up to 12 lines
+                             const linesToShow = Math.min(lines.length, maxLinesBeforeNewPage, 12);
+                             
+                             // Draw each line
+                             for (let i = 0; i < linesToShow; i++) {
+                                 doc.text(lines[i], colX, y + 4 + (i * 5));
+                             }
+                             
+                             // If content was truncated, show indicator and move to next page/column
+                             if (lines.length > linesToShow) {
+                                 const continueText = `[...continued (${lines.length - linesToShow} more lines)]`;
+                                 doc.text(continueText, colX, y + 4 + (linesToShow * 5));
+                                 
+                                 // If we're not at the end of fields, and this is a really long answer
+                                 // Give option to show full text on hover or in a special section
+                                 
+                                 y += 5 + (linesToShow * 5) + 5; // More space for multiline + indicator
+                             } else {
+                                 y += 5 + (lines.length * 5); // Just the text height plus a bit of padding
+                             }
+                         }
+                    } else if (field.field_type === 'checkbox') {
+                        // For checkbox fields
+                        const isChecked = value === 'yes';
+                        if (isChecked) {
+                            doc.setFillColor(40, 167, 69);
+                            doc.circle(colX + 20, y - 2, 3, 'F');
+                            doc.text('Yes', colX + 25, y);
+                        } else {
+                            doc.setDrawColor(220, 53, 69);
+                            doc.circle(colX + 20, y - 2, 3, 'S');
+                            doc.text('No', colX + 25, y);
+                        }
+                        y += 8;
+                                         } else {
+                         // For regular fields - allow up to 100 chars with wrapping
+                         if (value.length > 40) {
+                             // Split into multiple lines if needed
+                             const lines = doc.splitTextToSize(value, 80);
+                             const linesToShow = Math.min(lines.length, 3); // Show up to 3 lines
+                             
+                             for (let i = 0; i < linesToShow; i++) {
+                                 doc.text(lines[i], colX, y + 4 + (i * 5));
+                             }
+                             
+                             // Add more space based on number of lines
+                             y += 6 + (linesToShow * 5);
+                         } else {
+                             // For shorter values, just show on one line
+                             doc.text(value, colX, y + 4);
+                             y += 10;
+                         }
+                     }
+                    
+                    // Check if we need a new page
+                    if (y > 260 && !useRightColumn) {
+                        useRightColumn = true;
+                        y = 85;
+                    } else if (y > 260 && useRightColumn) {
+                        doc.addPage();
+                        y = 40;
+                        useRightColumn = false;
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error processing field values:', e);
+            doc.text('Error displaying field values', 14, 85);
+        }
+        
+        // Page footer
+        const pageCount = doc.getNumberOfPages();
+        doc.setPage(pageCount);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+            `${eventTitle} - Attendee Details - Page ${index + 1} of ${rows.length}`,
+            doc.internal.pageSize.getWidth() / 2, 
+            doc.internal.pageSize.getHeight() - 10, 
+            { align: 'center' }
+        );
+    });
+    
+         // Add final summary page if there were any attendees
+     if (rows.length > 0) {
+         doc.addPage();
+         
+         // Summary page header
+         doc.setFontSize(18);
+         doc.setFont('helvetica', 'bold');
+         doc.text('Detailed Attendee Report - Summary', 14, 20);
+         
+         doc.setFontSize(12);
+         doc.setFont('helvetica', 'normal');
+         doc.text(`Event: ${eventTitle}`, 14, 35);
+         doc.text(`Total Attendees: ${rows.length}`, 14, 45);
+         doc.text(`Generated on: ${today}`, 14, 55);
+         
+         doc.setFontSize(10);
+         doc.text('This report contains detailed information for each registered attendee.', 14, 70);
+         doc.text('Each attendee has their own dedicated page(s) with all submitted information.', 14, 80);
+         doc.text('Long text answers are shown in full to ensure all information is preserved.', 14, 90);
+     }
+     
+     // Generate and download the PDF
+     const filename = `${eventTitle.replace(/\s+/g, '-')}-detailed-attendee-report.pdf`;
+     doc.save(filename);
 }
 
 // Mini Calendar functions
