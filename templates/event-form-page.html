@@ -186,12 +186,26 @@
     </div>
 
     <!-- Capacity Warning Alert (shows only when capacity is almost full) -->
-    <div id="capacity-warning" class="alert alert-warning d-flex align-items-center mb-4" role="alert" style="display: none !important;">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <div>
-            <strong>Almost Full!</strong> Only <span id="seats-left">0</span> seats remaining for this event.
+    {% if current_form.has_capacity and current_form.capacity %}
+        {% set seats_left = current_form.capacity - submissions|length %}
+        {% set capacity_percentage = (submissions|length / current_form.capacity * 100)|int %}
+        
+        {% if seats_left <= 10 and seats_left > 0 %}
+        <div id="capacity-warning" class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>
+                <strong>Almost Full!</strong> Only <span id="seats-left">{{ seats_left }}</span> seats remaining for this event.
+            </div>
         </div>
-    </div>
+        {% elif seats_left <= 0 %}
+        <div id="capacity-warning" class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+            <i class="bi bi-x-circle-fill me-2"></i>
+            <div>
+                <strong>Capacity Reached!</strong> This event is at full capacity.
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
     
     <!-- Quick Actions -->
     <div class="card mb-4">
@@ -247,7 +261,11 @@
                 </div>
                 <div class="col-md-4">
                     <div class="capacity-text text-center">
-                        <span id="capacity-count">0</span>/<span id="capacity-total">0</span> seats filled
+                        {% if current_form.has_capacity %}
+                            <span id="capacity-count">{{ submissions|length }}</span>/<span id="capacity-total">{{ current_form.capacity }}</span> seats filled
+                        {% else %}
+                            <span id="capacity-count">{{ submissions|length }}</span> registrations (unlimited capacity)
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -585,27 +603,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Setup capacity tracking
 function setupCapacityTracking() {
-    const totalCapacity = {{ current_form.capacity|default(100) }};
     const currentRegistrations = {{ submissions|length }};
-    const capacityPercentage = (currentRegistrations / totalCapacity) * 100;
     
-    // Update progress bar
-    const progressBar = document.getElementById('capacity-progress');
-    progressBar.style.width = capacityPercentage + '%';
-    progressBar.setAttribute('aria-valuenow', capacityPercentage);
-    
-    // Set color based on capacity
-    if (capacityPercentage < 50) {
-        progressBar.classList.add('bg-success');
-    } else if (capacityPercentage < 85) {
+    {% if current_form.has_capacity and current_form.capacity %}
+        const totalCapacity = {{ current_form.capacity }};
+        const capacityPercentage = (currentRegistrations / totalCapacity) * 100;
+        
+        // Update progress bar
+        const progressBar = document.getElementById('capacity-progress');
+        progressBar.style.width = capacityPercentage + '%';
+        progressBar.setAttribute('aria-valuenow', capacityPercentage);
+        
+        // Set color based on capacity
+        if (capacityPercentage < 50) {
+            progressBar.classList.add('bg-success');
+        } else if (capacityPercentage < 85) {
+            progressBar.classList.add('bg-info');
+        } else {
+            progressBar.classList.add('bg-warning');
+        }
+    {% else %}
+        // For unlimited capacity
+        const progressBar = document.getElementById('capacity-progress');
+        progressBar.style.width = '100%';
+        progressBar.setAttribute('aria-valuenow', 100);
         progressBar.classList.add('bg-info');
-    } else {
-        progressBar.classList.add('bg-warning');
-    }
-    
-    // Update text
-    document.getElementById('capacity-count').textContent = currentRegistrations;
-    document.getElementById('capacity-total').textContent = totalCapacity;
+    {% endif %}
 }
 
 // Initialize charts
@@ -810,17 +833,8 @@ function generateRegistrationData(days) {
 
 // Setup capacity warning
 function setupCapacityWarning() {
-    // Example: Assuming max capacity is stored in data attribute or can be fetched from server
-    const totalCapacity = {{ current_form.capacity|default(100) }};
-    const currentRegistrations = {{ submissions|length }};
-    const seatsLeft = totalCapacity - currentRegistrations;
-    const capacityPercentage = (currentRegistrations / totalCapacity) * 100;
-    
-    // Show warning if less than 10% seats left
-    if (capacityPercentage > 90 && seatsLeft > 0) {
-        document.getElementById('capacity-warning').style.display = 'flex !important';
-        document.getElementById('seats-left').textContent = seatsLeft;
-    }
+    // Warnings are now handled by server-side templating
+    // No need for JavaScript here as we're showing/hiding the alerts using Jinja2
 }
 
 // Load recent activity feed

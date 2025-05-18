@@ -75,11 +75,17 @@ async def create_form(
     location: Optional[str] = Form(None),
     event_date: Optional[str] = Form(None),
     event_time: Optional[str] = Form(None),
+    has_capacity: str = Form(False),
+    capacity: Optional[int] = Form(None),
     images: List[UploadFile] = File(...)
 ):
     # Validate at least one image is provided
     if not images or len(images) == 0:
         raise HTTPException(status_code=400, detail="At least one image is required")
+    
+    # Process capacity settings
+    has_capacity_bool = has_capacity.lower() == 'true'
+    capacity_value = int(capacity) if has_capacity_bool and capacity else None
     
     # Create new form with enhanced event information
     new_form = FormModel(
@@ -89,6 +95,8 @@ async def create_form(
         event_date=datetime.fromisoformat(event_date) if event_date else None,
         event_time=event_time,
         hash_id=uuid.uuid4().hex,  # Generate a random hash_id
+        has_capacity=has_capacity_bool,
+        capacity=capacity_value,
         created_at=datetime.now(pytz.timezone('Asia/Bangkok'))
     )
     
@@ -171,11 +179,17 @@ async def update_form(
     location: Optional[str] = Form(None),
     event_date: Optional[str] = Form(None),
     event_time: Optional[str] = Form(None),
+    has_capacity: str = Form(False),
+    capacity: Optional[int] = Form(None),
     images: List[UploadFile] = File(None)
 ):
     form = db.query(FormModel).filter(FormModel.id == form_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Process capacity settings
+    has_capacity_bool = has_capacity.lower() == 'true'
+    capacity_value = int(capacity) if has_capacity_bool and capacity else None
     
     # Update basic details
     form.title = title
@@ -183,6 +197,8 @@ async def update_form(
     form.location = location
     form.event_date = datetime.fromisoformat(event_date) if event_date and event_date.strip() else None
     form.event_time = event_time
+    form.has_capacity = has_capacity_bool
+    form.capacity = capacity_value
     
     # Handle image uploads
     if images and len(images) > 0:

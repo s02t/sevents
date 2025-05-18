@@ -50,9 +50,20 @@
                             {% endif %}
                             
                             <div class="mt-4">
-                                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#registrationModal">
-                                    <i class="bi bi-pencil-square me-2"></i> Register Now
-                                </button>
+                                {% if current_form.has_capacity and current_form.capacity and submissions|length >= current_form.capacity %}
+                                    <button class="btn btn-danger btn-lg" disabled>
+                                        <i class="bi bi-exclamation-circle me-2"></i> Registration Full
+                                    </button>
+                                    <p class="text-danger mt-2"><small>This event has reached maximum capacity.</small></p>
+                                {% else %}
+                                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#registrationModal">
+                                        <i class="bi bi-pencil-square me-2"></i> Register Now
+                                    </button>
+                                    {% if current_form.has_capacity and current_form.capacity %}
+                                        {% set seats_left = current_form.capacity - submissions|length %}
+                                        <p class="text-muted mt-2"><small>{{ seats_left }} seats remaining</small></p>
+                                    {% endif %}
+                                {% endif %}
                             </div>
                         </div>
                         

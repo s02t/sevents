@@ -109,6 +109,34 @@
                             </div>
                         </div>
                         
+                        <!-- Capacity Settings -->
+                        <div class="mb-3">
+                            <label class="form-label">Capacity Settings</label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="has_capacity" id="capacityUnlimited" 
+                                      value="false" {% if not current_form.has_capacity %}checked{% endif %}>
+                                <label class="form-check-label" for="capacityUnlimited">
+                                    Unlimited Capacity
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="has_capacity" id="capacityLimited" 
+                                      value="true" {% if current_form.has_capacity %}checked{% endif %}>
+                                <label class="form-check-label" for="capacityLimited">
+                                    Limited Capacity
+                                </label>
+                            </div>
+                            <div class="capacity-input-group mt-3" {% if not current_form.has_capacity %}style="display: none;"{% endif %}>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="number" class="form-control" name="capacity" id="capacityInput" 
+                                          min="1" placeholder="Enter maximum number of attendees" 
+                                          value="{{ current_form.capacity }}" 
+                                          {% if current_form.has_capacity %}required{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Event Image -->
                         <div class="mb-3">
                             <label for="images" class="form-label">Event Images</label>
@@ -704,5 +732,26 @@ function copyRegistrationLink() {
         console.error('Failed to copy: ', err);
     });
 }
+
+// Handle capacity settings toggle
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to capacity radio buttons
+    document.querySelectorAll('input[name="has_capacity"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const capacityInputGroup = document.querySelector('.capacity-input-group');
+            const capacityInput = document.getElementById('capacityInput');
+            
+            if (this.value === 'true') {
+                // Show capacity input when limited capacity is selected
+                capacityInputGroup.style.display = 'block';
+                capacityInput.required = true;
+            } else {
+                // Hide capacity input when unlimited capacity is selected
+                capacityInputGroup.style.display = 'none';
+                capacityInput.required = false;
+            }
+        });
+    });
+});
 </script>
 {% endblock %} 

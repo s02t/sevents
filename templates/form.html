@@ -89,12 +89,12 @@
                 </div>
                 
                 <!-- Event Description -->
-                <div class="event-description mb-3">
-                    <div class="mb-0 text-break markdown-content" 
-                       style="overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                        {{ form.description }}
-                    </div>
-                </div>
+<div class="event-description mb-3">
+    <div class="mb-0 text-break markdown-content description-preview" 
+       style="overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
+        {{ form.description }}
+    </div>
+</div>
                 
                 <!-- Event Metadata -->
                 <div class="event-meta mb-3">
@@ -190,6 +190,28 @@
                             <input type="time" name="event_time" class="form-control">
                         </div>
                     </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Capacity Settings</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="has_capacity" id="capacityUnlimited" value="false" checked>
+                            <label class="form-check-label" for="capacityUnlimited">
+                                Unlimited Capacity
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="has_capacity" id="capacityLimited" value="true">
+                            <label class="form-check-label" for="capacityLimited">
+                                Limited Capacity
+                            </label>
+                        </div>
+                        <div class="capacity-input-group mt-3" style="display: none;">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="number" class="form-control" name="capacity" id="capacityInput" min="1" placeholder="Enter maximum number of attendees">
+                            </div>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Event Images</label>
                         <input type="file" name="images" class="form-control" accept="image/*" multiple required>
@@ -278,6 +300,34 @@
 
 {% block script %}
 <script>
+// Process markdown in event descriptions and strip raw syntax
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.description-preview').forEach(function(el) {
+        // First render the markdown to HTML
+        if (el.textContent) {
+            // Store original text content
+            const originalText = el.textContent.trim();
+            
+            try {
+                // Parse markdown to HTML
+                const parsedHtml = marked.parse(originalText);
+                
+                // Create a temporary div to hold the parsed HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = parsedHtml;
+                
+                // Get the text content from the parsed HTML (strips markdown syntax)
+                const plainText = tempDiv.textContent;
+                
+                // Update the element with cleaned text
+                el.textContent = plainText;
+            } catch (e) {
+                console.error("Error parsing markdown:", e);
+            }
+        }
+    });
+});
+
 // Function to show registration modal
 function showRegisterModal(formHashId, formTitle) {
     // Update modal title
@@ -375,6 +425,27 @@ function updateAttendanceRate(submissions, scanned) {
         document.getElementById('attendance-rate').innerText = '0%';
     }
 }
+
+// Handle capacity settings toggle
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to capacity radio buttons
+    document.querySelectorAll('input[name="has_capacity"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const capacityInputGroup = document.querySelector('.capacity-input-group');
+            const capacityInput = document.getElementById('capacityInput');
+            
+            if (this.value === 'true') {
+                // Show capacity input when limited capacity is selected
+                capacityInputGroup.style.display = 'block';
+                capacityInput.required = true;
+            } else {
+                // Hide capacity input when unlimited capacity is selected
+                capacityInputGroup.style.display = 'none';
+                capacityInput.required = false;
+            }
+        });
+    });
+});
 </script>
 {% endblock %}
 

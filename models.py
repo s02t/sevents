@@ -63,6 +63,8 @@ class FormModel(Base):
     event_date = Column(DateTime, nullable=True)
     event_time = Column(String, nullable=True)
     image_url = Column(String, nullable=True)  # Legacy field - maintain for backward compatibility
+    has_capacity = Column(Boolean, default=False)  # Whether event has limited capacity
+    capacity = Column(Integer, nullable=True)  # Total seat capacity (null = unlimited)
     created_at = Column(DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Bangkok')))
     
     # Relationships

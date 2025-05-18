@@ -70,11 +70,15 @@ db: Session = Depends(get_db)):
     # Get event images
     event_images = db.query(EventImage).filter(EventImage.form_id == form.id).all()
     
+    # Get submissions for capacity check
+    submissions = db.query(Submission).filter(Submission.form_id == form.id).all()
+    
     return templates.TemplateResponse("create-submission.html", {
         "request": request,
         "current_form": form,
         "fields": fields,
         "event_images": event_images,
+        "submissions": submissions,
         "new_submission_form": True,
         "is_public_page": True
     })
@@ -93,6 +97,12 @@ async def create_submission(
     form = db.query(FormModel).filter(FormModel.id == form_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Check if capacity is reached
+    if form.has_capacity and form.capacity:
+        submissions_count = db.query(Submission).filter(Submission.form_id == form_id).count()
+        if submissions_count >= form.capacity:
+            raise HTTPException(status_code=400, detail="Event has reached maximum capacity")
     
     fields = db.query(FormField).filter(FormField.form_id == form_id).all()
     
@@ -199,11 +209,24 @@ db: Session = Depends(get_db)):
     # Get event images
     event_images = db.query(EventImage).filter(EventImage.form_id == form.id).all()
     
+    # Get submissions for capacity check
+    submissions = db.query(Submission).filter(Submission.form_id == form.id).all()
+    
+    # Check if capacity is reached
+    if form.has_capacity and form.capacity and len(submissions) >= form.capacity:
+        return templates.TemplateResponse("partials/capacity-reached.html", {
+            "request": request,
+            "current_form": form,
+            "is_modal": True,
+            "is_public_page": True
+        })
+    
     return templates.TemplateResponse("partials/registration-form.html", {
         "request": request,
         "current_form": form,
         "fields": fields,
         "event_images": event_images,
+        "submissions": submissions,
         "is_modal": True,
         "is_public_page": True
     })
