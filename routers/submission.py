@@ -51,29 +51,32 @@ db: Session = Depends(get_db)):
         "request": request,
         "submission": submission,
         "fields": fields,
-        "qr_image_path": f"/submission/qr/{submission.qr_code.uuid}"
+        "qr_image_path": f"/submission/qr/{submission.qr_code.uuid}",
+        "is_public_page": True
     })  
 
-# Public registration form - no auth needed
-@router.get("/create/{form_id}", response_class=HTMLResponse)
-async def new_submission_form(request: Request, form_id: int, 
+# Public registration form - using hash_id instead of numeric ID
+@router.get("/create/{form_hash_id}", response_class=HTMLResponse)
+async def new_submission_form(request: Request, form_hash_id: str, 
 db: Session = Depends(get_db)):
-    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    # Look up form by hash_id instead of numeric ID
+    form = db.query(FormModel).filter(FormModel.hash_id == form_hash_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
     
     # Get the form fields to dynamically generate the submission form
-    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    fields = db.query(FormField).filter(FormField.form_id == form.id).order_by(FormField.order).all()
     
     # Get event images
-    event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    event_images = db.query(EventImage).filter(EventImage.form_id == form.id).all()
     
     return templates.TemplateResponse("create-submission.html", {
         "request": request,
         "current_form": form,
         "fields": fields,
         "event_images": event_images,
-        "new_submission_form": True
+        "new_submission_form": True,
+        "is_public_page": True
     })
 
 # Public submission handler - no auth needed
@@ -181,26 +184,28 @@ async def get_admin_qr_code(uuid: str, db: Session = Depends(get_db)):
     return Response(content=buffer.getvalue(), media_type="image/png")
 
 # Public registration form for modal - no auth needed
-@router.get("/modal-form/{form_id}", response_class=HTMLResponse)
-async def modal_registration_form(request: Request, form_id: int, 
+@router.get("/modal-form/{form_hash_id}", response_class=HTMLResponse)
+async def modal_registration_form(request: Request, form_hash_id: str, 
 db: Session = Depends(get_db)):
     """Return a compact registration form for embedding in a modal"""
-    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    # Look up form by hash_id instead of numeric ID
+    form = db.query(FormModel).filter(FormModel.hash_id == form_hash_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
     
     # Get the form fields
-    fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
+    fields = db.query(FormField).filter(FormField.form_id == form.id).order_by(FormField.order).all()
     
     # Get event images
-    event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    event_images = db.query(EventImage).filter(EventImage.form_id == form.id).all()
     
     return templates.TemplateResponse("partials/registration-form.html", {
         "request": request,
         "current_form": form,
         "fields": fields,
         "event_images": event_images,
-        "is_modal": True
+        "is_modal": True,
+        "is_public_page": True
     })
 
 # new_form = Form(title="Conference Registration", description="2024 Tech Summit")

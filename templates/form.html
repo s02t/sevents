@@ -128,11 +128,11 @@
                         <i class="bi bi-pencil me-1"></i> Edit
                     </a>
                     <button class="btn btn-sm btn-warning d-flex align-items-center justify-content-center flex-grow-1" 
-                            onclick="showRegisterModal('{{ form.id }}', '{{ form.title }}')">
+                            onclick="showRegisterModal('{{ form.hash_id }}', '{{ form.title }}')">
                         <i class="bi bi-pencil-square me-1"></i> Register
                     </button>
                     <button class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center" 
-                            onclick="copyLink('/submission/create/{{ form.id }}')"
+                            onclick="copyLink('/submission/create/{{ form.hash_id }}')"
                             data-bs-toggle="tooltip" title="Copy registration link">
                         <i class="bi bi-link-45deg"></i>
                     </button>
@@ -279,7 +279,7 @@
 {% block script %}
 <script>
 // Function to show registration modal
-function showRegisterModal(formId, formTitle) {
+function showRegisterModal(formHashId, formTitle) {
     // Update modal title
     document.getElementById('registerModalTitle').innerText = 'Register for: ' + formTitle;
     
@@ -288,7 +288,7 @@ function showRegisterModal(formId, formTitle) {
     modal.show();
     
     // Fetch the registration form content
-    fetch('/submission/create/' + formId + '?modal=true')
+    fetch('/submission/create/' + formHashId + '?modal=true')
         .then(response => response.text())
         .then(html => {
             document.getElementById('registerModalContent').innerHTML = html;

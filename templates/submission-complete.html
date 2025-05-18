@@ -290,13 +290,13 @@ function shareEvent() {
         navigator.share({
             title: 'Join me at {{ submission.form.title }}',
             text: 'I just registered for {{ submission.form.title }}. Join me!',
-            url: window.location.origin + '/submission/create/{{ submission.form_id }}'
+            url: window.location.origin + '/submission/create/{{ submission.form.hash_id }}'
         })
         .then(() => console.log('Share successful'))
         .catch((error) => console.log('Error sharing:', error));
     } else {
         // Fallback for browsers that don't support Web Share API
-        const shareUrl = window.location.origin + '/submission/create/{{ submission.form_id }}';
+        const shareUrl = window.location.origin + '/submission/create/{{ submission.form.hash_id }}';
         
         Swal.fire({
             title: 'Share This Event',

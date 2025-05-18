@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, Column, String, DateTime, Boolean
 from datetime import datetime
 import pytz
 from passlib.context import CryptContext
+import uuid
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -53,6 +54,8 @@ class EventImage(Base):
 class FormModel(Base):
     __tablename__ = "forms"
     id = Column(Integer, primary_key=True, index=True)
+    # Add a random hash/UUID for public URLs
+    hash_id = Column(String, unique=True, index=True, default=lambda: uuid.uuid4().hex)
     # Form metadata
     title = Column(String)
     description = Column(String)

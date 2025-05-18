@@ -222,12 +222,25 @@
             </div>
             <div class="input-group mt-3">
                 <input type="text" class="form-control" id="registration-link" 
-                       value="{{ request.url_for('new_submission_form', form_id=current_form.id) | string }}" readonly>
-                <button class="btn btn-outline-secondary" type="button" onclick="copyLink('/submission/create/{{ current_form.id }}')">
+                       value="{{ request.base_url }}submission/create/{{ current_form.hash_id }}" readonly>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyLink('/submission/create/{{ current_form.hash_id }}')">
                     <i class="bi bi-clipboard"></i>
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Fix the URL generation for the form link -->
+    <div class="mb-4">
+        <label class="form-label fw-semibold">Registration URL</label>
+        <div class="input-group">
+            <input type="text" class="form-control" 
+                value="{{ request.base_url }}submission/create/{{ current_form.hash_id }}" readonly>
+            <button class="btn btn-outline-primary" type="button" onclick="copyRegistrationLink()">
+                <i class="bi bi-clipboard"></i> Copy
+            </button>
+        </div>
+        <div id="registrationLinkHelp" class="form-text">Share this link for users to register for your event</div>
     </div>
 </div>
 
@@ -669,6 +682,26 @@ function setupFieldEvents() {
         document.getElementById('field-name').disabled = false;
         document.getElementById('field-type').disabled = false;
         document.getElementById('field-required').disabled = false;
+    });
+}
+
+// Function to copy registration link
+function copyRegistrationLink() {
+    const linkInput = document.querySelector('input[value*="/submission/create/"]');
+    const link = linkInput.value;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(link).then(() => {
+        // Show toast or alert
+        Swal.fire({
+            title: 'Link Copied!',
+            text: 'The registration link has been copied to your clipboard.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
     });
 }
 </script>

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse
 from starlette import status
-from models import FormModel, Submission, FormField, EventImage, User
+from models import FormModel, Submission, FormField, EventImage, User, QRCode
 from sqlalchemy.orm import Session, joinedload
 from database import SessionLocal
 from dependencies import get_db, get_admin_user
@@ -57,6 +57,10 @@ async def read_root(request: Request, db: db_dependency):
     
     forms = db.query(FormModel).all()
     
+    # Add public registration URL to each form
+    for form in forms:
+        form.public_url = f"/submission/create/{form.hash_id}"
+    
     return templates.TemplateResponse("form.html", {
         "request": request,
         "forms": forms
@@ -84,6 +88,7 @@ async def create_form(
         location=location,
         event_date=datetime.fromisoformat(event_date) if event_date else None,
         event_time=event_time,
+        hash_id=uuid.uuid4().hex,  # Generate a random hash_id
         created_at=datetime.now(pytz.timezone('Asia/Bangkok'))
     )
     
@@ -238,6 +243,9 @@ async def edit_form(
     
     fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
     
+    # Add public URL to the form
+    form.public_url = f"/submission/create/{form.hash_id}"
+    
     return templates.TemplateResponse("edit-form.html", {
         "request": request,
         "current_form": form,
@@ -299,6 +307,9 @@ async def view_form_submissions(
     submissions = db.query(Submission).filter(Submission.form_id == form_id).options(joinedload(Submission.qr_code)).all()
     fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
     event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    
+    # Add public URL to the form
+    form.public_url = f"/submission/create/{form.hash_id}"
     
     return templates.TemplateResponse("event-form-page.html", {
         "request": request,
@@ -434,3 +445,24 @@ async def toggle_submission_status(
         "status": submission.qr_code.status,
         "checked_in_at": submission.qr_code.checked_in_at.isoformat() if submission.qr_code.checked_in_at else None
     }
+
+@router.get("/stats/submissions", dependencies=[Depends(get_admin_user)])
+async def get_submission_stats(db: db_dependency):
+    """Get statistics about submissions"""
+    count = db.query(Submission).count()
+    return {"count": count}
+
+@router.get("/stats/scanned", dependencies=[Depends(get_admin_user)])
+async def get_scanned_stats(db: db_dependency):
+    """Get statistics about scanned QR codes"""
+    count = db.query(QRCode).filter(QRCode.status == True).count()
+    return {"count": count}
+
+@router.get("/public-link/{form_id}")
+async def get_public_link(form_id: int, db: db_dependency):
+    """Get the public registration link for a form by ID"""
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    return {"url": f"/submission/create/{form.hash_id}"}

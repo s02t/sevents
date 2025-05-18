@@ -11,6 +11,7 @@ from database import engine
 from dependencies import get_db, get_admin_user
 from sqlalchemy.orm import Session
 import os
+import uuid
 
 # FastAPI setup
 app = FastAPI()
@@ -41,6 +42,31 @@ templates = Jinja2Templates(directory="templates")
 # Admin dependency for protected routes
 admin_dependency = Annotated[User, Depends(get_admin_user)]
 db_dependency = Annotated[Session, Depends(get_db)]
+
+# Add migration to run on startup - ensure all forms have hash_id
+@app.on_event("startup")
+async def ensure_form_hash_ids():
+    print("Running migration check: Ensuring all forms have hash_id...")
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        # Get all forms without hash_id
+        forms_without_hash = db.query(FormModel).filter(
+            (FormModel.hash_id == None) | (FormModel.hash_id == "")
+        ).all()
+        
+        if forms_without_hash:
+            print(f"Found {len(forms_without_hash)} forms without hash_id. Adding hash_id...")
+            for form in forms_without_hash:
+                form.hash_id = uuid.uuid4().hex
+            db.commit()
+            print("Migration complete: All forms now have hash_id.")
+        else:
+            print("No migration needed: All forms already have hash_id.")
+    except Exception as e:
+        print(f"Error during migration: {str(e)}")
+    finally:
+        db.close()
 
 # Routes
 @app.get("/")

@@ -163,7 +163,9 @@
     </style>
 </head>
 <body>
+    {% if not is_public_page %}
     {% include 'navbar.html' %}
+    {% endif %}
     <main>
         {% block content %}{% endblock %}
     </main>
