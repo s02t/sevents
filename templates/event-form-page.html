@@ -110,6 +110,23 @@
         display: block;
         box-sizing: border-box;
     }
+    
+    /* Selected row highlighting */
+    tr.submission-row {
+        cursor: pointer;
+    }
+    
+    tr.submission-row.selected-row {
+        background-color: rgba(67, 97, 238, 0.1) !important;
+    }
+    
+    tr.submission-row.selected-row:hover {
+        background-color: rgba(67, 97, 238, 0.15) !important;
+    }
+    
+    #selection-info {
+        transition: all 0.3s ease;
+    }
 </style>
 
 <!-- Submissions Table (shown when viewing a specific form) -->
@@ -599,6 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCapacityTracking();
     initCharts();
     setupMiniCalendar();
+    setupRowSelection();
 });
 
 // Setup capacity tracking
@@ -922,6 +940,9 @@ function setupQuickActions() {
 
 // Send email blast to attendees
 function sendEmailBlast() {
+    // Get selected submission IDs
+    const selectedIds = getSelectedSubmissionIds();
+    
     Swal.fire({
         title: 'Email Attendees',
         html: `
@@ -932,6 +953,7 @@ function sendEmailBlast() {
             <div class="mb-3">
                 <label for="email-message" class="form-label">Message</label>
                 <textarea id="email-message" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
+                <small class="text-muted">You can use HTML formatting in your message</small>
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="send-to-all" checked>
@@ -939,6 +961,8 @@ function sendEmailBlast() {
                     Send to all registrants
                 </label>
             </div>
+            ${selectedIds.length > 0 ? 
+                `<div class="mt-2 text-info"><small>${selectedIds.length} submissions selected</small></div>` : ''}
         `,
         showCancelButton: true,
         confirmButtonText: 'Send',
@@ -948,22 +972,73 @@ function sendEmailBlast() {
         preConfirm: () => {
             const subject = document.getElementById('email-subject').value;
             const message = document.getElementById('email-message').value;
+            const sendToAll = document.getElementById('send-to-all').checked;
             
             if (!subject || !message) {
                 Swal.showValidationMessage('Please fill in both subject and message');
                 return false;
             }
             
-            return { subject, message };
+            if (!sendToAll && selectedIds.length === 0) {
+                Swal.showValidationMessage('Please select at least one recipient or choose "Send to all"');
+                return false;
+            }
+            
+            return { subject, message, sendToAll, selectedIds };
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            // Here you would send the actual email
+            // Show loading while sending emails
             Swal.fire({
-                title: 'Emails Sent!',
-                text: 'Your message has been sent to all attendees',
-                icon: 'success',
-                confirmButtonColor: '#4361ee'
+                title: 'Sending Emails',
+                html: 'Please wait while we send your emails...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Send email via API
+            const requestData = {
+                subject: result.value.subject,
+                message: result.value.message,
+                send_to_all: result.value.sendToAll,
+                selected_ids: result.value.sendToAll ? [] : result.value.selectedIds
+            };
+            
+            fetch(`/form/forms/{{ current_form.id }}/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Emails Scheduled!',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonColor: '#4361ee'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'Failed to send emails',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error sending emails:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Failed to send emails. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
             });
         }
     });
@@ -2277,6 +2352,77 @@ function getCheckInData() {
         labels: timeLabels,
         counts: counts
     };
+}
+
+// Add these functions after setupFilters function
+// Setup row selection for bulk actions
+function setupRowSelection() {
+    const rows = document.querySelectorAll('tr.submission-row');
+    rows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't select if clicking on buttons/links
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || 
+                e.target.closest('button') || e.target.closest('a')) {
+                return;
+            }
+            
+            // Toggle selected class
+            this.classList.toggle('selected-row');
+            updateSelectionCount();
+        });
+    });
+}
+
+// Get selected submission IDs
+function getSelectedSubmissionIds() {
+    const selectedRows = document.querySelectorAll('tr.submission-row.selected-row');
+    return Array.from(selectedRows).map(row => parseInt(row.getAttribute('data-submission-id')));
+}
+
+// Update selection count
+function updateSelectionCount() {
+    const count = document.querySelectorAll('tr.submission-row.selected-row').length;
+    
+    // Either create or find the selection info element
+    let selectionInfo = document.getElementById('selection-info');
+    if (!selectionInfo) {
+        selectionInfo = document.createElement('div');
+        selectionInfo.id = 'selection-info';
+        selectionInfo.className = 'alert alert-info mt-2 d-flex justify-content-between align-items-center';
+        selectionInfo.style.display = 'none';
+        
+        const infoContent = document.createElement('span');
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn btn-sm btn-outline-info';
+        clearBtn.textContent = 'Clear Selection';
+        clearBtn.onclick = function() {
+            document.querySelectorAll('tr.submission-row.selected-row').forEach(row => {
+                row.classList.remove('selected-row');
+            });
+            updateSelectionCount();
+        };
+        
+        selectionInfo.appendChild(infoContent);
+        selectionInfo.appendChild(clearBtn);
+        
+        // Insert after the filter controls
+        const filterCard = document.querySelector('.card-body');
+        filterCard.appendChild(selectionInfo);
+    }
+    
+    // Update the content
+    const infoContent = selectionInfo.querySelector('span');
+    if (infoContent) {
+        infoContent.textContent = `${count} items selected`;
+    }
+    
+    // Show/hide based on selection
+    if (count > 0) {
+        selectionInfo.style.display = 'flex';
+    } else {
+        selectionInfo.style.display = 'none';
+    }
 }
 </script>
 {% endblock %}

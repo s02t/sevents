@@ -1,78 +1,56 @@
-# QR Code Event Management App
+# QR Event Management System
 
-A FastAPI application for event registration, QR code generation, and check-in management.
+This is an event management system with QR code generation and check-in functionality.
 
 ## Features
 
-- Event creation and management
-- Custom registration forms
-- QR code generation for attendees
-- Check-in functionality
-- Admin authentication
+- Create and manage events
+- Generate customizable registration forms
+- Set event capacity with unlimited or limited seats
+- Generate QR codes for attendees
+- Send automatic email confirmations with QR codes
+- Check in attendees by scanning QR codes
+- View event statistics and reports
 
-## Authentication System
+## Setup Email with Mailtrap
 
-The application includes a basic authentication system that restricts admin features to authenticated users while keeping registration forms publicly accessible.
+To enable email functionality (registration confirmations and notifications):
 
-### Admin Features (Protected)
+1. Sign up for a free [Mailtrap](https://mailtrap.io/) account
+2. Create a new inbox in Mailtrap
+3. Go to the SMTP settings section to get your credentials
+4. Create a `.env` file in the root directory with the following:
 
-- Event creation and management
-- Form field configuration
-- Submissions viewing
-- QR code scanning and check-in
+```
+# Mailtrap SMTP settings
+MAIL_USERNAME=your_mailtrap_username
+MAIL_PASSWORD=your_mailtrap_password
+MAIL_FROM=noreply@example.com
+MAIL_PORT=2525
+MAIL_SERVER=sandbox.smtp.mailtrap.io
+MAIL_FROM_NAME=QR Event System
 
-### Public Features
+# Other settings
+MAIL_TLS=True
+MAIL_SSL=False
+USE_CREDENTIALS=True
+VALIDATE_CERTS=True
+```
 
-- Event registration forms
-- Form submission
-- QR code receipt
+5. Replace `your_mailtrap_username` and `your_mailtrap_password` with your actual credentials
 
-## Setup
+## Installation
 
-1. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-
-2. Create an admin user:
-   ```
-   python create_admin.py <username> <email> <password>
-   ```
-
-3. Run the application:
-   ```
-   uvicorn main:app --reload
-   ```
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Set up the database: `python init_db.py`
+4. Create an admin user: `python create_admin.py`
+5. Start the server: `uvicorn main:app --reload`
 
 ## Usage
 
-1. Login as an admin:
-   - Access `/auth/login` or `/admin` to log in
-   - Use the credentials created with the admin script
-
-2. Create events and forms:
-   - Create a new event form through the admin interface
-   - Configure fields as needed
-
-3. Share registration links:
-   - Share the public registration URL with attendees:
-   ```
-   /submission/create/{form_id}
-   ```
-
-4. Manage registrations:
-   - View and track submissions
-   - Scan QR codes for check-in
-
-## User Management
-
-Admins can manage users through the admin interface:
-- Create new users (regular or admin)
-- Delete existing users
-
-## Authentication Details
-
-- HTTP Basic Authentication is used for simplicity
-- Admin users can access all features
-- Regular users have limited access (if implemented)
-- Public access is available only to registration forms 
+1. Access the admin dashboard at: http://localhost:8000/
+2. Login with your admin credentials
+3. Create new events and registration forms
+4. Share registration links with potential attendees
+5. Monitor registrations and check-ins via the dashboard 

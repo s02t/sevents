@@ -1,7 +1,7 @@
 from typing import Annotated, Dict, Any
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile
+from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile, BackgroundTasks
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from starlette import status
 from models import QRCode, Submission, FormModel, FormField, EventImage, User
@@ -19,6 +19,7 @@ from typing import Optional
 from datetime import datetime
 import pytz
 import json
+from email_utils import EmailManager
 templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(
@@ -87,6 +88,7 @@ db: Session = Depends(get_db)):
 @router.post("/submit")
 async def create_submission(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     # Get form data
@@ -115,10 +117,11 @@ async def create_submission(
         field_values[field.field_name] = field_value
     
     # Create submission with dynamic fields
+    submission_time = datetime.now(pytz.timezone('Asia/Bangkok'))
     new_submission = Submission(
         form_id=form_id,
         field_values=field_values,
-        submitted_at=datetime.now(pytz.timezone('Asia/Bangkok'))
+        submitted_at=submission_time
     )
     db.add(new_submission)
     db.commit()
@@ -137,10 +140,36 @@ async def create_submission(
     new_qr = QRCode(
         uuid=qr_id,
         submission_id=new_submission.id,
-        created_at=datetime.now(pytz.timezone('Asia/Bangkok'))
+        created_at=submission_time
     )
     db.add(new_qr)
     db.commit()
+    
+    # Send confirmation email in the background
+    if "email" in field_values and field_values["email"]:
+        # Prepare email data
+        email_data = {
+            "first_name": field_values.get("first_name", ""),
+            "last_name": field_values.get("last_name", ""),
+            "event_title": form.title,
+            "event_location": form.location,
+            "event_date": form.event_date.strftime('%A, %B %d, %Y') if form.event_date else "",
+            "event_time": form.event_time,
+            "qr_uuid": qr_id,
+            "submission_id": new_submission.id,
+            "registration_date": submission_time.strftime('%Y-%m-%d %H:%M'),
+            "event_url": f"{request.base_url}submission/submission-complete/{new_submission.id}",
+            "organizer_name": "sevents",
+            "current_year": datetime.now().year
+        }
+        
+        # Add email sending task to background tasks
+        background_tasks.add_task(
+            EmailManager.send_registration_email,
+            field_values["email"],
+            f"Registration Confirmed: {form.title}",
+            email_data
+        )
     
     # Redirect to public submission-complete page
     return RedirectResponse(url=f"/submission/submission-complete/{new_submission.id}", status_code=303)

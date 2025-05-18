@@ -1,7 +1,7 @@
 from typing import Annotated, List, Optional
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile, File
+from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile, File, BackgroundTasks
 from fastapi.responses import FileResponse, HTMLResponse
 from starlette import status
 from models import FormModel, Submission, FormField, EventImage, User, QRCode
@@ -21,6 +21,7 @@ from datetime import datetime
 import pytz
 import json
 from fastapi.staticfiles import StaticFiles
+from email_utils import EmailManager
 
 templates = Jinja2Templates(directory="templates",
 auto_reload=True,  # Critical for development
@@ -42,6 +43,12 @@ class FieldRequest(BaseModel):
     options: Optional[str] = None
     required: bool = False
     order: int
+
+class EmailRequest(BaseModel):
+    subject: str
+    message: str
+    send_to_all: bool = True
+    selected_ids: List[int] = []
 
 @router.get("/test-data")
 async def test_data(db: db_dependency):
@@ -530,4 +537,65 @@ async def get_form_fields(
             }
             for field in fields
         ]
+    }
+
+@router.post("/forms/{form_id}/send-email", dependencies=[Depends(get_admin_user)])
+async def send_batch_email(
+    form_id: int,
+    email_request: EmailRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Send batch emails to event attendees"""
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Get submissions to email
+    query = db.query(Submission).filter(Submission.form_id == form_id)
+    
+    # If not sending to all, filter by selected IDs
+    if not email_request.send_to_all and email_request.selected_ids:
+        query = query.filter(Submission.id.in_(email_request.selected_ids))
+    
+    submissions = query.all()
+    
+    # Check if there are any submissions
+    if not submissions:
+        return {"success": False, "message": "No recipients found"}
+    
+    # Collect email addresses
+    email_list = []
+    for submission in submissions:
+        if "email" in submission.field_values and submission.field_values["email"]:
+            email_list.append(submission.field_values["email"])
+    
+    if not email_list:
+        return {"success": False, "message": "No valid email addresses found"}
+    
+    # Prepare email data
+    email_data = {
+        "event_title": form.title,
+        "event_location": form.location,
+        "event_date": form.event_date.strftime('%A, %B %d, %Y') if form.event_date else "",
+        "event_time": form.event_time,
+        "message_content": email_request.message,
+        "organizer_name": "sevents",
+        "current_year": datetime.now().year,
+        "action_url": str(request.base_url).rstrip("/") + f"/submission/create/{form.hash_id}",
+        "action_text": "View Event Details"
+    }
+    
+    # Add email sending to background tasks
+    background_tasks.add_task(
+        EmailManager.send_event_update,
+        email_list,
+        email_request.subject,
+        email_data
+    )
+    
+    return {
+        "success": True, 
+        "message": f"Email scheduled to be sent to {len(email_list)} recipients"
     }

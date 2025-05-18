@@ -1,197 +1,223 @@
 <!-- {{ forms|length }} forms found -->
 
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <div class="container py-5">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <!-- Success Card -->
-            <div class="card text-center mb-5">
-                <div class="card-body p-5">
-                    <div class="success-checkmark">
-                        <div class="check-icon">
-                            <span class="icon-line line-tip"></span>
-                            <span class="icon-line line-long"></span>
-                            <div class="icon-circle"></div>
-                            <div class="icon-fix"></div>
-                        </div>
-                    </div>
-                    <h1 class="display-5 mt-4 mb-3">Registration Complete!</h1>
-                    <p class="lead text-muted mb-4">Thank you for registering for {{ submission.form.title }}. Your registration has been confirmed.</p>
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                        <button class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer me-1"></i> Print Confirmation
-                        </button>
-                    </div>
-                </div>
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <!-- Success Card -->
+      <div class="card text-center mb-5">
+        <div class="card-body p-5">
+          <div class="success-checkmark">
+            <div class="check-icon">
+              <span class="icon-line line-tip"></span>
+              <span class="icon-line line-long"></span>
+              <div class="icon-circle"></div>
+              <div class="icon-fix"></div>
             </div>
-            
-            <!-- Registration Details Card -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h4 class="mb-0">Registration Details</h4>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <h5>Event Information</h5>
-                            <ul class="list-unstyled">
-                                <li><strong>Event:</strong> {{ submission.form.title }}</li>
-                                {% if submission.form.location %}
-                                <li><strong>Location:</strong> {{ submission.form.location }}</li>
-                                {% endif %}
-                                {% if submission.form.event_date %}
-                                <li><strong>Date:</strong> {{ submission.form.event_date.strftime('%A, %B %d, %Y') }}</li>
-                                {% endif %}
-                                {% if submission.form.event_time %}
-                                <li><strong>Time:</strong> {{ submission.form.event_time }}</li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <h5>Registration Info</h5>
-                            <ul class="list-unstyled">
-                                <li><strong>Registration ID:</strong> #{{ submission.id }}</li>
-                                <li><strong>Submitted:</strong> {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</li>
-                                <li><strong>Status:</strong> <span class="badge bg-success">Confirmed</span></li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Display submitted field values -->
-                    <h5 class="mb-3">Your Information</h5>
-                    <div class="row">
-                        {% for field in fields %}
-                        <div class="col-md-6 mb-3">
-                            <div class="d-flex">
-                                <div class="text-muted me-2">{{ field.label }}:</div>
-                                <div class="text-break fw-medium">
-                                    {% if submission.field_values[field.field_name] %}
-                                        {% if field.field_type == 'checkbox' %}
-                                            {% if submission.field_values[field.field_name] == 'yes' %}Yes{% else %}No{% endif %}
-                                        {% else %}
-                                            {{ submission.field_values[field.field_name] }}
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="text-muted fst-italic">Not provided</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- QR Code Card -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h4 class="mb-0">Your QR Code</h4>
-                </div>
-                <div class="card-body text-center p-4">
-                    <p class="mb-4">Present this QR code when you arrive at the event for check-in.</p>
-                    
-                    <div class="qr-container mx-auto mb-3">
-                        <img src="{{ qr_image_path }}" class="img-fluid" alt="QR Code">
-                    </div>
-                    
-                    <div class="qr-code-id">ID: {{ submission.qr_code.uuid }}</div>
-                </div>
-            </div>
-            
-            <!-- Additional Information -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h4 class="mb-0">What's Next?</h4>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-md-6 mb-4 mb-md-0">
-                            <h5><i class="bi bi-envelope me-2 text-primary"></i> Confirmation Email</h5>
-                            <p>We've sent a confirmation email to <strong>{{ submission.field_values.get('email', 'your email address') }}</strong> with all the details of your registration.</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5><i class="bi bi-calendar-event me-2 text-primary"></i> Calendar Reminder</h5>
-                            <p>Add this event to your calendar so you don't miss it!</p>
-                            <a href="#" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-calendar-plus me-1"></i> Add to Calendar
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Contact Info -->
-            <p class="text-center text-muted">
-                If you have any questions, please contact us at <a href="mailto:support@example.com">support@example.com</a>
-            </p>
+          </div>
+          <h1 class="display-5 mt-4 mb-3">Registration Complete!</h1>
+          <p class="lead text-muted mb-4">
+            Thank you for registering for {{ submission.form.title }}. Your
+            registration has been confirmed.
+          </p>
+          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+              <i class="bi bi-printer me-1"></i> Print Confirmation
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- Registration Details Card -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">Registration Details</h4>
+        </div>
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-6 mb-4">
+              <h5>Event Information</h5>
+              <ul class="list-unstyled">
+                <li><strong>Event:</strong> {{ submission.form.title }}</li>
+                {% if submission.form.location %}
+                <li>
+                  <strong>Location:</strong> {{ submission.form.location }}
+                </li>
+                {% endif %} {% if submission.form.event_date %}
+                <li>
+                  <strong>Date:</strong> {{
+                  submission.form.event_date.strftime('%A, %B %d, %Y') }}
+                </li>
+                {% endif %} {% if submission.form.event_time %}
+                <li><strong>Time:</strong> {{ submission.form.event_time }}</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div class="col-md-6 mb-4">
+              <h5>Registration Info</h5>
+              <ul class="list-unstyled">
+                <li><strong>Registration ID:</strong> #{{ submission.id }}</li>
+                <li>
+                  <strong>Submitted:</strong> {{
+                  submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}
+                </li>
+                <li>
+                  <strong>Status:</strong>
+                  <span class="badge bg-success">Confirmed</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <hr class="my-4" />
+
+          <!-- Display submitted field values -->
+          <h5 class="mb-3">Your Information</h5>
+          <div class="row">
+            {% for field in fields %}
+            <div class="col-md-6 mb-3">
+              <div class="d-flex">
+                <div class="text-muted me-2">{{ field.label }}:</div>
+                <div class="text-break fw-medium">
+                  {% if submission.field_values[field.field_name] %} {% if
+                  field.field_type == 'checkbox' %} {% if
+                  submission.field_values[field.field_name] == 'yes' %}Yes{%
+                  else %}No{% endif %} {% else %} {{
+                  submission.field_values[field.field_name] }} {% endif %} {%
+                  else %}
+                  <span class="text-muted fst-italic">Not provided</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Card -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">Your QR Code</h4>
+        </div>
+        <div class="card-body text-center p-4">
+          <p class="mb-4">
+            Present this QR code when you arrive at the event for check-in.
+          </p>
+
+          <div class="qr-container mx-auto mb-3">
+            <img src="{{ qr_image_path }}" class="img-fluid" alt="QR Code" />
+          </div>
+
+          <div class="qr-code-id">ID: {{ submission.qr_code.uuid }}</div>
+        </div>
+      </div>
+
+      <!-- Additional Information -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">What's Next?</h4>
+        </div>
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-6 mb-4 mb-md-0">
+              <h5>
+                <i class="bi bi-envelope me-2 text-primary"></i> Confirmation
+                Email
+              </h5>
+              <p>
+                We've sent a confirmation email to
+                <strong
+                  >{{ submission.field_values.get('email', 'your email address')
+                  }}</strong
+                >
+                with all the details of your registration.
+              </p>
+            </div>
+            <div class="col-md-6">
+              <h5>
+                <i class="bi bi-calendar-event me-2 text-primary"></i> Calendar
+                Reminder
+              </h5>
+              <p>Add this event to your calendar so you don't miss it!</p>
+              <a href="#" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-calendar-plus me-1"></i> Add to Calendar
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Info -->
+      <p class="text-center text-muted">
+        If you have any questions, please contact us at
+        <a href="mailto:support@sevents.com">support@sevents.com</a>
+      </p>
     </div>
+  </div>
 </div>
 
 <style>
-/* Success Checkmark Animation */
-.success-checkmark {
+  /* Success Checkmark Animation */
+  .success-checkmark {
     width: 80px;
     height: 80px;
     margin: 0 auto;
-}
-.success-checkmark .check-icon {
+  }
+  .success-checkmark .check-icon {
     width: 80px;
     height: 80px;
     position: relative;
     border-radius: 50%;
     box-sizing: content-box;
     border: 4px solid #4caf50;
-}
-.success-checkmark .check-icon::before {
+  }
+  .success-checkmark .check-icon::before {
     top: 3px;
     left: -2px;
     width: 30px;
     transform-origin: 100% 50%;
     border-radius: 100px 0 0 100px;
-}
-.success-checkmark .check-icon::after {
+  }
+  .success-checkmark .check-icon::after {
     top: 0;
     left: 30px;
     width: 60px;
     transform-origin: 0 50%;
     border-radius: 0 100px 100px 0;
     animation: rotate-circle 4.25s ease-in;
-}
-.success-checkmark .check-icon::before, .success-checkmark .check-icon::after {
-    content: '';
+  }
+  .success-checkmark .check-icon::before,
+  .success-checkmark .check-icon::after {
+    content: "";
     height: 100px;
     position: absolute;
     background: #fff;
     transform: rotate(-45deg);
-}
-.success-checkmark .check-icon .icon-line {
+  }
+  .success-checkmark .check-icon .icon-line {
     height: 5px;
     background-color: #4caf50;
     display: block;
     border-radius: 2px;
     position: absolute;
     z-index: 10;
-}
-.success-checkmark .check-icon .icon-line.line-tip {
+  }
+  .success-checkmark .check-icon .icon-line.line-tip {
     top: 46px;
     left: 14px;
     width: 25px;
     transform: rotate(45deg);
     animation: icon-line-tip 0.75s;
-}
-.success-checkmark .check-icon .icon-line.line-long {
+  }
+  .success-checkmark .check-icon .icon-line.line-long {
     top: 38px;
     right: 8px;
     width: 47px;
     transform: rotate(-45deg);
     animation: icon-line-long 0.75s;
-}
-.success-checkmark .check-icon .icon-circle {
+  }
+  .success-checkmark .check-icon .icon-circle {
     top: -4px;
     left: -4px;
     z-index: 10;
@@ -201,8 +227,8 @@
     position: absolute;
     box-sizing: content-box;
     border: 4px solid rgba(76, 175, 80, 0.5);
-}
-.success-checkmark .check-icon .icon-fix {
+  }
+  .success-checkmark .check-icon .icon-fix {
     top: 8px;
     width: 5px;
     left: 26px;
@@ -211,152 +237,203 @@
     position: absolute;
     transform: rotate(-45deg);
     background-color: #fff;
-}
+  }
 
-@keyframes rotate-circle {
-    0% { transform: rotate(-45deg); }
-    5% { transform: rotate(-45deg); }
-    12% { transform: rotate(-405deg); }
-    100% { transform: rotate(-405deg); }
-}
-@keyframes icon-line-tip {
-    0% { width: 0; left: 1px; top: 19px; }
-    54% { width: 0; left: 1px; top: 19px; }
-    70% { width: 50px; left: -8px; top: 37px; }
-    84% { width: 17px; left: 21px; top: 48px; }
-    100% { width: 25px; left: 14px; top: 45px; }
-}
-@keyframes icon-line-long {
-    0% { width: 0; right: 46px; top: 54px; }
-    65% { width: 0; right: 46px; top: 54px; }
-    84% { width: 55px; right: 0; top: 35px; }
-    100% { width: 47px; right: 8px; top: 38px; }
-}
+  @keyframes rotate-circle {
+    0% {
+      transform: rotate(-45deg);
+    }
+    5% {
+      transform: rotate(-45deg);
+    }
+    12% {
+      transform: rotate(-405deg);
+    }
+    100% {
+      transform: rotate(-405deg);
+    }
+  }
+  @keyframes icon-line-tip {
+    0% {
+      width: 0;
+      left: 1px;
+      top: 19px;
+    }
+    54% {
+      width: 0;
+      left: 1px;
+      top: 19px;
+    }
+    70% {
+      width: 50px;
+      left: -8px;
+      top: 37px;
+    }
+    84% {
+      width: 17px;
+      left: 21px;
+      top: 48px;
+    }
+    100% {
+      width: 25px;
+      left: 14px;
+      top: 45px;
+    }
+  }
+  @keyframes icon-line-long {
+    0% {
+      width: 0;
+      right: 46px;
+      top: 54px;
+    }
+    65% {
+      width: 0;
+      right: 46px;
+      top: 54px;
+    }
+    84% {
+      width: 55px;
+      right: 0;
+      top: 35px;
+    }
+    100% {
+      width: 47px;
+      right: 8px;
+      top: 38px;
+    }
+  }
 
-/* QR Code Styling */
-.qr-container {
+  /* QR Code Styling */
+  .qr-container {
     max-width: 200px;
     padding: 15px;
     background: white;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-.qr-code-id {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  .qr-code-id {
     font-size: 0.85rem;
     color: #6c757d;
     margin-top: 10px;
-}
+  }
 
-@media print {
-    .btn { display: none; }
-}
+  @media print {
+    .btn {
+      display: none;
+    }
+  }
 </style>
-{% endblock %}
-
-{% block script %}
+{% endblock %} {% block script %}
 <script>
-// Download QR Code
-function downloadQR() {
-    const imgSrc = document.querySelector('.qr-container img').src;
-    
+  // Download QR Code
+  function downloadQR() {
+    const imgSrc = document.querySelector(".qr-container img").src;
+
     // Fix: Use submission instead of submissions and get first_name and last_name from field_values
     const firstName = "{{ submission.field_values.get('first_name', '') }}";
     const lastName = "{{ submission.field_values.get('last_name', '') }}";
-    const name = (firstName + "_" + lastName).toLowerCase().replace(/\s+/g, '_');
-    
-    const link = document.createElement('a');
+    const name = (firstName + "_" + lastName)
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+
+    const link = document.createElement("a");
     link.href = imgSrc;
     link.download = `event_qrcode_${name}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Show success message
     Swal.fire({
-        title: 'QR Code Downloaded!',
-        text: 'Keep it accessible for event check-in',
-        icon: 'success',
-        confirmButtonColor: '#4361ee'
+      title: "QR Code Downloaded!",
+      text: "Keep it accessible for event check-in",
+      icon: "success",
+      confirmButtonColor: "#4361ee",
     });
-}
+  }
 
-// Share Event function
-function shareEvent() {
+  // Share Event function
+  function shareEvent() {
     // Check if Web Share API is available
     if (navigator.share) {
-        navigator.share({
-            title: 'Join me at {{ submission.form.title }}',
-            text: 'I just registered for {{ submission.form.title }}. Join me!',
-            url: window.location.origin + '/submission/create/{{ submission.form.hash_id }}'
+      navigator
+        .share({
+          title: "Join me at {{ submission.form.title }}",
+          text: "I just registered for {{ submission.form.title }}. Join me!",
+          url:
+            window.location.origin +
+            "/submission/create/{{ submission.form.hash_id }}",
         })
-        .then(() => console.log('Share successful'))
-        .catch((error) => console.log('Error sharing:', error));
+        .then(() => console.log("Share successful"))
+        .catch((error) => console.log("Error sharing:", error));
     } else {
-        // Fallback for browsers that don't support Web Share API
-        const shareUrl = window.location.origin + '/submission/create/{{ submission.form.hash_id }}';
-        
-        Swal.fire({
-            title: 'Share This Event',
-            html: `
+      // Fallback for browsers that don't support Web Share API
+      const shareUrl =
+        window.location.origin +
+        "/submission/create/{{ submission.form.hash_id }}";
+
+      Swal.fire({
+        title: "Share This Event",
+        html: `
                 <p>Share this registration link with others:</p>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" value="${shareUrl}" id="shareUrlInput" readonly>
                     <button class="btn btn-outline-primary" type="button" onclick="copyShareUrl()">Copy</button>
                 </div>
             `,
-            icon: 'info',
-            confirmButtonColor: '#4361ee'
-        });
+        icon: "info",
+        confirmButtonColor: "#4361ee",
+      });
     }
-}
+  }
 
-// Copy share URL
-function copyShareUrl() {
-    const shareUrlInput = document.getElementById('shareUrlInput');
+  // Copy share URL
+  function copyShareUrl() {
+    const shareUrlInput = document.getElementById("shareUrlInput");
     shareUrlInput.select();
-    document.execCommand('copy');
-    
-    const copyBtn = shareUrlInput.nextElementSibling;
-    copyBtn.innerHTML = 'Copied!';
-    copyBtn.classList.remove('btn-outline-primary');
-    copyBtn.classList.add('btn-success');
-    
-    setTimeout(() => {
-        copyBtn.innerHTML = 'Copy';
-        copyBtn.classList.remove('btn-success');
-        copyBtn.classList.add('btn-outline-primary');
-    }, 2000);
-}
+    document.execCommand("copy");
 
-// Contact support
-function contactSupport() {
+    const copyBtn = shareUrlInput.nextElementSibling;
+    copyBtn.innerHTML = "Copied!";
+    copyBtn.classList.remove("btn-outline-primary");
+    copyBtn.classList.add("btn-success");
+
+    setTimeout(() => {
+      copyBtn.innerHTML = "Copy";
+      copyBtn.classList.remove("btn-success");
+      copyBtn.classList.add("btn-outline-primary");
+    }, 2000);
+  }
+
+  // Contact support
+  function contactSupport() {
     Swal.fire({
-        title: 'Contact Event Support',
-        html: `
+      title: "Contact Event Support",
+      html: `
             <p>If you have any questions about your registration:</p>
             <p><i class="bi bi-envelope"></i> Email: <a href="mailto:support@example.com">support@example.com</a></p>
             <p><i class="bi bi-telephone"></i> Phone: (123) 456-7890</p>
         `,
-        icon: 'info',
-        confirmButtonColor: '#4361ee'
+      icon: "info",
+      confirmButtonColor: "#4361ee",
     });
-}
+  }
 
-// Add button click handler only if the button exists
-document.addEventListener('DOMContentLoaded', function() {
-    const calendarBtn = document.getElementById('calendarBtn');
+  // Add button click handler only if the button exists
+  document.addEventListener("DOMContentLoaded", function () {
+    const calendarBtn = document.getElementById("calendarBtn");
     if (calendarBtn) {
-        calendarBtn.addEventListener('click', function() {
-            // In a real app, this would generate a calendar file or link
-            // For demo purposes, we'll just show a message
-            Swal.fire({
-                title: 'Add to Calendar',
-                text: 'In a real application, this would add the event to your calendar',
-                icon: 'info',
-                confirmButtonColor: '#4361ee'
-            });
+      calendarBtn.addEventListener("click", function () {
+        // In a real app, this would generate a calendar file or link
+        // For demo purposes, we'll just show a message
+        Swal.fire({
+          title: "Add to Calendar",
+          text: "In a real application, this would add the event to your calendar",
+          icon: "info",
+          confirmButtonColor: "#4361ee",
         });
+      });
     }
-});
+  });
 </script>
 {% endblock %}
