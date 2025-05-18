@@ -164,3 +164,48 @@ async def validate_qr(qr_data: QRData, db: Session = Depends(get_db)):
         
     except Exception as e:
         return {"success": False, "message": f"Error: {str(e)}"}
+
+# Add the verify-qr endpoint that the frontend is trying to use
+class QRVerifyData(BaseModel):
+    qr_data: str
+
+@router.post("/verify-qr")
+async def verify_qr(data: QRVerifyData, db: Session = Depends(get_db)):
+    try:
+        # Find the QR code using the provided UUID
+        qr_code = db.query(QRCode).filter(QRCode.uuid == data.qr_data).first()
+        
+        if not qr_code:
+            return {"success": False, "message": "Invalid QR code. This code was not found in our system."}
+        
+        # Check if QR code is already used
+        if qr_code.status:
+            return {"success": False, "message": "This QR code has already been used."}
+        
+        # Get the submission associated with this QR code
+        submission = db.query(Submission).filter(Submission.id == qr_code.submission_id).options(
+            joinedload(Submission.form)
+        ).first()
+        
+        if not submission:
+            return {"success": False, "message": "Registration information not found."}
+        
+        # Update QR code status to used (checked in) and record timestamp
+        current_time = datetime.now(pytz.timezone('Asia/Bangkok'))
+        qr_code.status = True
+        qr_code.checked_in_at = current_time
+        db.commit()
+        
+        # Return success with attendee data for display
+        return {
+            "success": True,
+            "message": "Check-in successful!",
+            "attendee_name": f"{submission.field_values.get('first_name', '')} {submission.field_values.get('last_name', '')}".strip(),
+            "attendee_email": submission.field_values.get('email', 'No email provided'),
+            "event_name": submission.form.title if submission.form else "Unknown Event",
+            "submission_id": submission.id,
+            "checked_in_at": current_time.isoformat()
+        }
+        
+    except Exception as e:
+        return {"success": False, "message": f"Error processing QR code: {str(e)}"}

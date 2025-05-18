@@ -10,6 +10,7 @@
                 <th>ID</th>
                 <th>Data</th>
                 <th>Created</th>
+                <th>Check-in Time</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -24,6 +25,13 @@
                 <td>{{ item.id }}</td>
                 <td>{{ item.uuid }}</td>
                 <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if item.status and item.checked_in_at %}
+                        {{ item.checked_in_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
                 <td>
                     <span class="status-{% if item.status %}used{% else %}unused{% endif %}">
                         {% if item.status %}Used{% else %}Unused{% endif %}

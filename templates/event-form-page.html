@@ -1,6 +1,117 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<!-- Custom CSS for new components -->
+<style>
+    /* Activity Feed Styles */
+    .activity-feed .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .activity-item {
+        position: relative;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .activity-icon {
+        position: absolute;
+        left: -30px;
+        top: 0;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .activity-icon i {
+        font-size: 12px;
+    }
+    
+    .activity-content {
+        padding-right: 20px;
+    }
+    
+    /* Stats Cards Styles */
+    .stats-card {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .stats-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: var(--bs-primary);
+    }
+    
+    .stats-card h3 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .stats-card p {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    
+    /* Capacity Progress */
+    .capacity-text {
+        font-size: 18px;
+        font-weight: 500;
+    }
+    
+    /* Quick Actions */
+    .btn-outline-primary:hover {
+        color: white;
+    }
+    
+    /* Demographics Map */
+    .geo-map-placeholder {
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* Chart container fixes */
+    .chart-container {
+        position: relative;
+        height: 250px;
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    canvas {
+        max-width: 100%;
+        max-height: 100%;
+    }
+    
+    /* Fix for endless chart expansion */
+    .col-md-6 canvas {
+        display: block;
+        box-sizing: border-box;
+    }
+</style>
+
 <!-- Submissions Table (shown when viewing a specific form) -->
 {% if current_form %}
 <div class="container py-4">
@@ -68,6 +179,211 @@
         </div>
     </div>
 
+    <!-- Capacity Warning Alert (shows only when capacity is almost full) -->
+    <div id="capacity-warning" class="alert alert-warning d-flex align-items-center mb-4" role="alert" style="display: none !important;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>
+            <strong>Almost Full!</strong> Only <span id="seats-left">0</span> seats remaining for this event.
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Quick Actions</h5>
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <a href="/event/edit/{{ current_form.id }}" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-pencil-square me-1"></i> Edit Event
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" onclick="sendEmailBlast()">
+                        <i class="bi bi-envelope me-1"></i> Email Attendees
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" onclick="bulkEdit()">
+                        <i class="bi bi-pencil me-1"></i> Bulk Edit
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" id="generate-badges">
+                        <i class="bi bi-card-heading me-1"></i> Generate Badges
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Recent Activity</h5>
+            <div class="activity-feed">
+                <div class="timeline">
+                    <!-- Activity items will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration & Capacity Tracking -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Registration Progress</h5>
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="progress" style="height: 25px;">
+                        <div id="capacity-progress" class="progress-bar" role="progressbar" 
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="capacity-text text-center">
+                        <span id="capacity-count">0</span>/<span id="capacity-total">0</span> seats filled
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h6 class="mb-3">Registration Trend</h6>
+                    <div class="chart-container">
+                        <canvas id="registrationChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="mb-3">Check-in Timeline</h6>
+                    <div class="chart-container">
+                        <canvas id="checkinChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Demographics -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Attendee Demographics</h5>
+            <div class="row">
+                <div class="col-md-12 mb-4">
+                    <!-- Geographic distribution placeholder -->
+                    <h6 class="mb-3">Geographic Distribution</h6>
+                    <div class="geo-map-placeholder text-center p-4 border rounded bg-light">
+                        <i class="bi bi-map fs-1 text-muted"></i>
+                        <p class="mt-2">Geographic distribution map will appear here when data is available.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="mb-3">Attendee Segments</h6>
+                    <div class="chart-container">
+                        <canvas id="segmentsChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="mb-3">Registration Sources</h6>
+                    <div class="chart-container">
+                        <canvas id="sourcesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Events -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0">Upcoming Events</h5>
+                <a href="/events" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            
+            <div class="row">
+                <!-- Mini Calendar -->
+                <div class="col-md-4">
+                    <div class="mini-calendar p-3 border rounded">
+                        <div class="calendar-header d-flex justify-content-between align-items-center mb-3">
+                            <button class="btn btn-sm btn-link text-decoration-none" id="prev-month">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <h6 class="mb-0" id="calendar-month">November 2023</h6>
+                            <button class="btn btn-sm btn-link text-decoration-none" id="next-month">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                        <table class="table table-sm mini-cal-table">
+                            <thead>
+                                <tr>
+                                    <th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calendar-body">
+                                <!-- Calendar days will be inserted here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Events List -->
+                <div class="col-md-8">
+                    <div class="upcoming-events-list">
+                        <div class="event-item d-flex align-items-center p-3 border-bottom">
+                            <div class="event-date text-center me-3">
+                                <div class="date-month">Nov</div>
+                                <div class="date-day">15</div>
+                            </div>
+                            <div class="event-details flex-grow-1">
+                                <h6 class="mb-0">Winter Conference 2023</h6>
+                                <div class="text-muted small">
+                                    <i class="bi bi-people me-1"></i> 78/120 registered
+                                </div>
+                            </div>
+                            <div class="event-actions">
+                                <span class="badge bg-success">In 3 days</span>
+                            </div>
+                        </div>
+                        
+                        <div class="event-item d-flex align-items-center p-3 border-bottom">
+                            <div class="event-date text-center me-3">
+                                <div class="date-month">Nov</div>
+                                <div class="date-day">28</div>
+                            </div>
+                            <div class="event-details flex-grow-1">
+                                <h6 class="mb-0">Tech Meetup - Cloud Computing</h6>
+                                <div class="text-muted small">
+                                    <i class="bi bi-people me-1"></i> 45/75 registered
+                                </div>
+                            </div>
+                            <div class="event-actions">
+                                <span class="badge bg-primary">In 2 weeks</span>
+                            </div>
+                        </div>
+                        
+                        <div class="event-item d-flex align-items-center p-3">
+                            <div class="event-date text-center me-3">
+                                <div class="date-month">Dec</div>
+                                <div class="date-day">5</div>
+                            </div>
+                            <div class="event-details flex-grow-1">
+                                <h6 class="mb-0">Year-End Networking Event</h6>
+                                <div class="text-muted small">
+                                    <i class="bi bi-people me-1"></i> 23/100 registered
+                                </div>
+                            </div>
+                            <div class="event-actions">
+                                <span class="badge bg-secondary">In 3 weeks</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Search and Filter tools -->
     <div class="card mb-4">
         <div class="card-body">
@@ -108,6 +424,7 @@
                             <th>Name</th>
                             <th>Email</th>
                             <th>Submitted At</th>
+                            <th>Check-in Time</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -128,6 +445,13 @@
                                 <a href="mailto:{{ item.field_values.email }}">{{ item.field_values.email }}</a>
                             </td>
                             <td>{{ item.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if item.qr_code.status and item.qr_code.checked_in_at %}
+                                    {{ item.qr_code.checked_in_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="badge bg-{% if item.qr_code.status %}success{% else %}warning{% endif %}">
                                     {% if item.qr_code.status %}Checked In{% else %}Pending{% endif %}
@@ -196,16 +520,532 @@
 {% endblock %}
 
 {% block script %}
-<!-- Add jsPDF and autoTable libraries -->
+<!-- Add libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<!-- Add this script to fix chart sizing issues -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fix chart sizing issues after the charts are initialized
+    setTimeout(function() {
+        // Get all chart instances and force resize
+        if (typeof Chart !== 'undefined' && Chart.instances) {
+            Object.keys(Chart.instances).forEach(function(key) {
+                if (Chart.instances[key]) {
+                    Chart.instances[key].resize();
+                }
+            });
+        }
+        
+        // Add event listener for window resize to maintain chart dimensions
+        window.addEventListener('resize', function() {
+            if (typeof Chart !== 'undefined' && Chart.instances) {
+                Object.keys(Chart.instances).forEach(function(key) {
+                    if (Chart.instances[key]) {
+                        Chart.instances[key].resize();
+                    }
+                });
+            }
+        });
+    }, 500);
+});
+</script>
 
 <script>
 // Calculate stats
 document.addEventListener('DOMContentLoaded', function() {
     updateStats();
     setupFilters();
+    
+    // Initialize new features
+    setupCapacityWarning();
+    loadRecentActivity();
+    setupQuickActions();
+    setupCapacityTracking();
+    initCharts();
+    setupMiniCalendar();
 });
+
+// Setup capacity tracking
+function setupCapacityTracking() {
+    const totalCapacity = {{ current_form.capacity|default(100) }};
+    const currentRegistrations = {{ submissions|length }};
+    const capacityPercentage = (currentRegistrations / totalCapacity) * 100;
+    
+    // Update progress bar
+    const progressBar = document.getElementById('capacity-progress');
+    progressBar.style.width = capacityPercentage + '%';
+    progressBar.setAttribute('aria-valuenow', capacityPercentage);
+    
+    // Set color based on capacity
+    if (capacityPercentage < 50) {
+        progressBar.classList.add('bg-success');
+    } else if (capacityPercentage < 85) {
+        progressBar.classList.add('bg-info');
+    } else {
+        progressBar.classList.add('bg-warning');
+    }
+    
+    // Update text
+    document.getElementById('capacity-count').textContent = currentRegistrations;
+    document.getElementById('capacity-total').textContent = totalCapacity;
+}
+
+// Initialize charts
+function initCharts() {
+    // Set chart defaults to prevent endless expansion
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.responsive = true;
+        Chart.defaults.maintainAspectRatio = false;
+    }
+    // Clear any existing charts to prevent memory leaks
+    Chart.helpers.each(Chart.instances, function(instance) {
+        instance.destroy();
+    });
+    
+    // Set global defaults for all charts
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = false;
+    
+    // Registration trend chart
+    const regCtx = document.getElementById('registrationChart').getContext('2d');
+    const regChart = new Chart(regCtx, {
+        type: 'line',
+        data: {
+            labels: generateDateLabels(7), // Last 7 days
+            datasets: [{
+                label: 'New Registrations',
+                data: generateRegistrationData(7),
+                fill: true,
+                backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                borderColor: 'rgba(67, 97, 238, 1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Check-in timeline chart
+    const checkCtx = document.getElementById('checkinChart').getContext('2d');
+    
+    // Get real check-in data from our submissions
+    const checkinData = getCheckInData();
+    
+    const checkChart = new Chart(checkCtx, {
+        type: 'bar',
+        data: {
+            labels: checkinData.labels,
+            datasets: [{
+                label: 'Check-ins',
+                data: checkinData.counts,
+                backgroundColor: 'rgba(69, 170, 142, 0.7)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            // Format the time range for tooltip title
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            return context.parsed.y + ' check-ins';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Attendee segments chart
+    const segmentsCtx = document.getElementById('segmentsChart').getContext('2d');
+    const segmentsChart = new Chart(segmentsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Students', 'Professionals', 'Speakers', 'Partners'],
+            datasets: [{
+                data: [35, 45, 10, 10],
+                backgroundColor: [
+                    'rgba(67, 97, 238, 0.7)',
+                    'rgba(69, 170, 142, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(220, 53, 69, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10, 
+                    top: 0,
+                    bottom: 0
+                }
+            }
+        }
+    });
+    
+    // Registration sources chart
+    const sourcesCtx = document.getElementById('sourcesChart').getContext('2d');
+    const sourcesChart = new Chart(sourcesCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Direct Link', 'Email', 'Social Media', 'Website'],
+            datasets: [{
+                data: [40, 30, 20, 10],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(32, 201, 151, 0.7)',
+                    'rgba(255, 193, 7, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 0,
+                    bottom: 0
+                }
+            }
+        }
+    });
+    
+    // Handle window resize to prevent chart distortion
+    window.addEventListener('resize', function() {
+        regChart.resize();
+        checkChart.resize();
+        segmentsChart.resize();
+        sourcesChart.resize();
+    });
+}
+
+// Generate date labels for the past n days
+function generateDateLabels(days) {
+    const labels = [];
+    for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
+    return labels;
+}
+
+// Generate random registration data for demo purposes
+function generateRegistrationData(days) {
+    return Array.from({length: days}, () => Math.floor(Math.random() * 15) + 1);
+}
+
+// Setup capacity warning
+function setupCapacityWarning() {
+    // Example: Assuming max capacity is stored in data attribute or can be fetched from server
+    const totalCapacity = {{ current_form.capacity|default(100) }};
+    const currentRegistrations = {{ submissions|length }};
+    const seatsLeft = totalCapacity - currentRegistrations;
+    const capacityPercentage = (currentRegistrations / totalCapacity) * 100;
+    
+    // Show warning if less than 10% seats left
+    if (capacityPercentage > 90 && seatsLeft > 0) {
+        document.getElementById('capacity-warning').style.display = 'flex !important';
+        document.getElementById('seats-left').textContent = seatsLeft;
+    }
+}
+
+// Load recent activity feed
+function loadRecentActivity() {
+    const activityFeed = document.querySelector('.timeline');
+    const submissions = Array.from(document.querySelectorAll('tr.submission-row'));
+    
+    // Sort submissions by submission date (newest first)
+    submissions.sort((a, b) => {
+        const dateA = new Date(a.querySelector('td:nth-child(5)').textContent.trim());
+        const dateB = new Date(b.querySelector('td:nth-child(5)').textContent.trim());
+        return dateB - dateA;
+    });
+    
+    // Take only the most recent 5 activities
+    const recentSubmissions = submissions.slice(0, 5);
+    
+    // Clear the activity feed
+    activityFeed.innerHTML = '';
+    
+    // Add recent activities to the feed
+    recentSubmissions.forEach(submission => {
+        const name = submission.querySelector('td:nth-child(3)').textContent.trim();
+        const date = submission.querySelector('td:nth-child(5)').textContent.trim();
+        const status = submission.getAttribute('data-status') === 'true' ? 'checked in' : 'registered';
+        const timeAgo = getTimeAgo(new Date(date));
+        
+        const activityItem = document.createElement('div');
+        activityItem.classList.add('activity-item');
+        activityItem.innerHTML = `
+            <div class="activity-icon ${status === 'checked in' ? 'bg-success' : 'bg-primary'}">
+                <i class="bi bi-${status === 'checked in' ? 'check-circle' : 'person-plus'}"></i>
+            </div>
+            <div class="activity-content">
+                <strong>${name}</strong> ${status}
+                <div class="text-muted small">${timeAgo}</div>
+            </div>
+        `;
+        
+        activityFeed.appendChild(activityItem);
+    });
+    
+    // If no recent activities
+    if (recentSubmissions.length === 0) {
+        activityFeed.innerHTML = '<div class="text-center text-muted py-3">No recent activity</div>';
+    }
+}
+
+// Get relative time (e.g., "5 minutes ago")
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    let interval = Math.floor(seconds / 31536000);
+    if (interval > 1) return interval + ' years ago';
+    if (interval === 1) return '1 year ago';
+    
+    interval = Math.floor(seconds / 2592000);
+    if (interval > 1) return interval + ' months ago';
+    if (interval === 1) return '1 month ago';
+    
+    interval = Math.floor(seconds / 86400);
+    if (interval > 1) return interval + ' days ago';
+    if (interval === 1) return '1 day ago';
+    
+    interval = Math.floor(seconds / 3600);
+    if (interval > 1) return interval + ' hours ago';
+    if (interval === 1) return '1 hour ago';
+    
+    interval = Math.floor(seconds / 60);
+    if (interval > 1) return interval + ' minutes ago';
+    if (interval === 1) return '1 minute ago';
+    
+    if (seconds < 10) return 'just now';
+    
+    return Math.floor(seconds) + ' seconds ago';
+}
+
+// Setup quick action buttons
+function setupQuickActions() {
+    // Email blast functionality
+    document.getElementById('generate-badges').addEventListener('click', function() {
+        generateBadges();
+    });
+}
+
+// Send email blast to attendees
+function sendEmailBlast() {
+    Swal.fire({
+        title: 'Email Attendees',
+        html: `
+            <div class="mb-3">
+                <label for="email-subject" class="form-label">Subject</label>
+                <input type="text" id="email-subject" class="form-control" placeholder="Event Update: {{ current_form.title }}">
+            </div>
+            <div class="mb-3">
+                <label for="email-message" class="form-label">Message</label>
+                <textarea id="email-message" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="send-to-all" checked>
+                <label class="form-check-label" for="send-to-all">
+                    Send to all registrants
+                </label>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Send',
+        confirmButtonColor: '#4361ee',
+        cancelButtonText: 'Cancel',
+        focusConfirm: false,
+        preConfirm: () => {
+            const subject = document.getElementById('email-subject').value;
+            const message = document.getElementById('email-message').value;
+            
+            if (!subject || !message) {
+                Swal.showValidationMessage('Please fill in both subject and message');
+                return false;
+            }
+            
+            return { subject, message };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Here you would send the actual email
+            Swal.fire({
+                title: 'Emails Sent!',
+                text: 'Your message has been sent to all attendees',
+                icon: 'success',
+                confirmButtonColor: '#4361ee'
+            });
+        }
+    });
+}
+
+// Bulk edit functionality
+function bulkEdit() {
+    Swal.fire({
+        title: 'Bulk Edit Options',
+        html: `
+            <div class="list-group">
+                <button type="button" class="list-group-item list-group-item-action" onclick="bulkEditStatus()">
+                    <i class="bi bi-check-circle me-2"></i> Update Check-in Status
+                </button>
+                <button type="button" class="list-group-item list-group-item-action" onclick="bulkDownloadQR()">
+                    <i class="bi bi-qr-code me-2"></i> Download All QR Codes
+                </button>
+                <button type="button" class="list-group-item list-group-item-action" onclick="bulkDelete()">
+                    <i class="bi bi-trash me-2"></i> Delete Selected Registrations
+                </button>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true
+    });
+}
+
+// Generate attendee badges
+function generateBadges() {
+    Swal.fire({
+        title: 'Generating Badges',
+        text: 'Preparing attendee badges for printing...',
+        icon: 'info',
+        confirmButtonColor: '#4361ee',
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+            
+            // Simulate badge generation process
+            setTimeout(() => {
+                Swal.fire({
+                    title: 'Badges Ready!',
+                    text: 'All attendee badges have been generated',
+                    icon: 'success',
+                    confirmButtonText: 'Download Badges (PDF)',
+                    confirmButtonColor: '#4361ee',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Here you would actually generate and download the PDF with badges
+                        generateBadgesPDF();
+                    }
+                });
+            }, 1500);
+        }
+    });
+}
+
+// Generate badges PDF
+function generateBadgesPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [100, 150]  // Typical badge size
+    });
+    
+    const submissions = document.querySelectorAll('tr.submission-row');
+    let counter = 0;
+    
+    submissions.forEach((row, index) => {
+        if (index > 0) doc.addPage();
+        
+        const name = row.querySelector('td:nth-child(3)').textContent.trim();
+        const email = row.querySelector('td:nth-child(4)').textContent.trim();
+        const qrCodeSrc = row.querySelector('td:nth-child(2) img').src;
+        
+        // Event title
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('{{ current_form.title }}', 50, 20, { align: 'center' });
+        
+        // Attendee name
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text(name, 50, 50, { align: 'center' });
+        
+        // Email
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(email, 50, 60, { align: 'center' });
+        
+        // We would need to convert the QR code to a data URL and add it to the PDF
+        // For this example, we just add a placeholder
+        doc.setDrawColor(0);
+        doc.setFillColor(240, 240, 240);
+        doc.roundedRect(35, 70, 30, 30, 3, 3, 'FD');
+        doc.setFontSize(10);
+        doc.text('QR Code', 50, 85, { align: 'center' });
+        
+        // Footer
+        doc.setFontSize(10);
+        doc.text('Scanned at check-in', 50, 110, { align: 'center' });
+        doc.text('{{ current_form.date|default("Event Date") }}', 50, 120, { align: 'center' });
+    });
+    
+    const eventName = '{{ current_form.title }}'.replace(/\s+/g, '-').toLowerCase();
+    doc.save(`${eventName}-badges.pdf`);
+}
 
 // Export to CSV
 function exportToCSV() {
@@ -224,8 +1064,8 @@ function exportToCSV() {
     // Prepare CSV content
     let csv = [];
     
-    // Add header row
-    const headers = ['#', 'Name', 'Email', 'Submitted At', 'Status'];
+    // Add header row - include check-in time
+    const headers = ['#', 'Name', 'Email', 'Submitted At', 'Check-in Time', 'Status'];
     csv.push(headers.join(','));
     
     // Add data rows
@@ -238,18 +1078,21 @@ function exportToCSV() {
         // Index 2 is Name column (td element)
         // Index 3 is Email column (td element)
         // Index 4 is Submission Date column (td element)
-        // Index 5 is Status column (td element)
+        // Index 5 is Check-in Time column (td element)
+        // Index 6 is Status column (td element)
         
         const name = allCells[2].textContent.trim();
         const email = allCells[3].textContent.trim();
         const submissionDate = allCells[4].textContent.trim();
-        const status = allCells[5].textContent.trim();
+        const checkinTime = allCells[5].textContent.trim();
+        const status = allCells[6].textContent.trim();
         
         const rowData = [
             index + 1,
             `"${name}"`,
             `"${email}"`,
             `"${submissionDate}"`,
+            `"${checkinTime}"`,
             `"${status}"`
         ];
         csv.push(rowData.join(','));
@@ -385,7 +1228,6 @@ function toggleStatus(id, currentStatus) {
     // Convert currentStatus from string to boolean if needed
     const isCurrentlyCheckedIn = currentStatus === 'true';
     
-    // This would be an API call in a real application
     Swal.fire({
         title: isCurrentlyCheckedIn ? 'Mark as Pending?' : 'Check In Attendee?',
         text: isCurrentlyCheckedIn ? 'This will revert the check-in status' : 'This will mark the attendee as checked in',
@@ -396,15 +1238,52 @@ function toggleStatus(id, currentStatus) {
         cancelButtonText: 'Cancel'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Here you would make an API call to update the status
-            // For demo, we'll just show a success message and reload
+            // Show loading indicator
             Swal.fire({
-                title: 'Updated!',
-                text: 'Status has been updated',
-                icon: 'success',
-                confirmButtonColor: '#4361ee'
-            }).then(() => {
-                window.location.reload();
+                title: 'Processing...',
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false
+            });
+            
+            // Make API call to toggle status
+            fetch(`/form/submissions/${id}/toggle-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Updated!',
+                        text: `Status changed to ${data.status ? 'Checked In' : 'Pending'}`,
+                        icon: 'success',
+                        confirmButtonColor: '#4361ee'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to update status');
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling status:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Failed to update status. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#ef476f'
+                });
             });
         }
     });
@@ -518,20 +1397,22 @@ function exportToPDF() {
         const name = allCells[2].textContent.trim();
         const email = allCells[3].textContent.trim();
         const submissionDate = allCells[4].textContent.trim();
-        const status = allCells[5].textContent.trim();
+        const checkinTime = allCells[5].textContent.trim();
+        const status = allCells[6].textContent.trim();
         
         tableData.push([
             index + 1, 
             name,
             email,
             submissionDate,
+            checkinTime,
             status
         ]);
     });
     
     // Add table to PDF
     doc.autoTable({
-        head: [['#', 'Name', 'Email', 'Submitted At', 'Status']],
+        head: [['#', 'Name', 'Email', 'Submitted At', 'Check-in Time', 'Status']],
         body: tableData,
         startY: 40,
         theme: 'grid',
@@ -555,13 +1436,13 @@ function exportToPDF() {
                 halign: 'center',
                 cellWidth: 15
             },
-            4: { // Status column
+            5: { // Status column
                 halign: 'center'
             }
         },
         didDrawCell: function(data) {
             // Add custom styling for status badges
-            if (data.section === 'body' && data.column.index === 4) {
+            if (data.section === 'body' && data.column.index === 5) {
                 const cell = data.cell;
                 const text = cell.text[0];
                 
@@ -607,6 +1488,264 @@ function exportToPDF() {
     // Generate and download the PDF
     const filename = `${eventTitle.replace(/\s+/g, '-')}-registrations.pdf`;
     doc.save(filename);
+}
+
+// Mini Calendar functions
+function setupMiniCalendar() {
+    // Event data for highlighting dates with events (for demo)
+    const eventDates = [
+        new Date(2023, 10, 15), // Nov 15, 2023
+        new Date(2023, 10, 28), // Nov 28, 2023
+        new Date(2023, 11, 5)   // Dec 5, 2023
+    ];
+    
+    // Initialize the calendar with current month
+    let currentDate = new Date();
+    let currentMonth = currentDate.getMonth();
+    let currentYear = currentDate.getFullYear();
+    
+    // Update calendar header
+    function updateCalendarHeader() {
+        const monthName = new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long' });
+        document.getElementById('calendar-month').textContent = `${monthName} ${currentYear}`;
+    }
+    
+    // Generate calendar days
+    function generateCalendarDays() {
+        // Get first day of the month and last day
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        // Clear the calendar
+        const calendarBody = document.getElementById('calendar-body');
+        calendarBody.innerHTML = '';
+        
+        // Create the calendar rows and cells
+        let date = 1;
+        for (let i = 0; i < 6; i++) {
+            // Create a row
+            let row = document.createElement('tr');
+            
+            // Create cells for each day of the week
+            for (let j = 0; j < 7; j++) {
+                let cell = document.createElement('td');
+                
+                if (i === 0 && j < firstDay) {
+                    // Empty cells before start of month
+                    cell.innerHTML = '';
+                } else if (date > lastDay) {
+                    // Empty cells after end of month
+                    cell.innerHTML = '';
+                } else {
+                    // Regular day cells
+                    cell.textContent = date;
+                    
+                    // Check if this date has an event
+                    const currentCellDate = new Date(currentYear, currentMonth, date);
+                    const hasEvent = eventDates.some(eventDate => 
+                        eventDate.getDate() === currentCellDate.getDate() && 
+                        eventDate.getMonth() === currentCellDate.getMonth() && 
+                        eventDate.getFullYear() === currentCellDate.getFullYear()
+                    );
+                    
+                    // If there's an event on this date, add event marker
+                    if (hasEvent) {
+                        cell.classList.add('has-event');
+                        
+                        // Add event dot marker
+                        const eventMarker = document.createElement('span');
+                        eventMarker.classList.add('event-marker');
+                        cell.appendChild(eventMarker);
+                    }
+                    
+                    // Highlight current day
+                    if (currentDate.getDate() === date && 
+                        currentDate.getMonth() === currentMonth && 
+                        currentDate.getFullYear() === currentYear) {
+                        cell.classList.add('current-day');
+                    }
+                    
+                    date++;
+                }
+                
+                row.appendChild(cell);
+            }
+            
+            // Stop if we've reached the end of the month
+            if (date > lastDay) {
+                calendarBody.appendChild(row);
+                break;
+            }
+            
+            calendarBody.appendChild(row);
+        }
+    }
+    
+    // Navigation functions
+    function prevMonth() {
+        currentMonth--;
+        if (currentMonth < 0) {
+            currentMonth = 11;
+            currentYear--;
+        }
+        updateCalendarHeader();
+        generateCalendarDays();
+    }
+    
+    function nextMonth() {
+        currentMonth++;
+        if (currentMonth > 11) {
+            currentMonth = 0;
+            currentYear++;
+        }
+        updateCalendarHeader();
+        generateCalendarDays();
+    }
+    
+    // Set up event listeners for navigation
+    document.getElementById('prev-month').addEventListener('click', prevMonth);
+    document.getElementById('next-month').addEventListener('click', nextMonth);
+    
+    // Initialize calendar
+    updateCalendarHeader();
+    generateCalendarDays();
+    
+    // Add styles for calendar markers dynamically
+    const style = document.createElement('style');
+    style.textContent = `
+        .mini-cal-table td {
+            text-align: center;
+            position: relative;
+            padding: 8px;
+            cursor: default;
+        }
+        
+        .mini-cal-table td.has-event {
+            font-weight: bold;
+            color: var(--bs-primary);
+        }
+        
+        .mini-cal-table td.current-day {
+            background-color: var(--bs-light);
+            border-radius: 50%;
+            font-weight: bold;
+        }
+        
+        .event-marker {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--bs-primary);
+        }
+        
+        .event-date {
+            background-color: var(--bs-light);
+            width: 50px;
+            border-radius: 6px;
+        }
+        
+        .date-month {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: var(--bs-primary);
+        }
+        
+        .date-day {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Get check-in data from submissions
+function getCheckInData() {
+    // Get all submissions that have been checked in
+    const checkedInRows = document.querySelectorAll('tr.submission-row[data-status="true"]');
+    
+    // If no check-ins, return empty data
+    if (checkedInRows.length === 0) {
+        return {
+            labels: ['No Data'],
+            counts: [0]
+        };
+    }
+    
+    // Create time slots for the hours (e.g., 9 AM, 10 AM, etc.)
+    const timeSlots = {};
+    const timeLabels = [];
+    
+    // Get all check-in times from the table
+    const checkInTimes = [];
+    checkedInRows.forEach(row => {
+        // The check-in time is in the 6th column (index 5)
+        const checkInTimeCell = row.querySelector('td:nth-child(6)');
+        const checkInTimeText = checkInTimeCell.textContent.trim();
+        
+        // Skip if no check-in time
+        if (checkInTimeText === '-') return;
+        
+        // Parse the timestamp
+        try {
+            // Format is "YYYY-MM-DD HH:MM:SS"
+            const timeParts = checkInTimeText.split(' ');
+            if (timeParts.length >= 2) {
+                const timePart = timeParts[1]; // HH:MM:SS
+                const hourPart = timePart.split(':')[0]; // HH
+                
+                // Create time slot label (e.g., "9 AM", "2 PM")
+                const hour = parseInt(hourPart, 10);
+                const hourLabel = hour > 12 ? (hour - 12) + ' PM' : hour + ' AM';
+                
+                // Initialize time slot if not exists
+                if (!timeSlots[hourLabel]) {
+                    timeSlots[hourLabel] = 0;
+                    timeLabels.push(hourLabel);
+                }
+                
+                // Increment count for this time slot
+                timeSlots[hourLabel]++;
+            }
+        } catch (error) {
+            console.error('Error parsing check-in time:', error);
+        }
+    });
+    
+    // Sort time labels chronologically
+    timeLabels.sort((a, b) => {
+        // Extract the hour as a number
+        const getHour = (label) => {
+            const isPM = label.includes('PM');
+            const hourStr = label.split(' ')[0];
+            let hour = parseInt(hourStr, 10);
+            if (isPM && hour < 12) hour += 12;
+            if (!isPM && hour === 12) hour = 0;
+            return hour;
+        };
+        
+        return getHour(a) - getHour(b);
+    });
+    
+    // If no valid times found, return empty data
+    if (timeLabels.length === 0) {
+        return {
+            labels: ['No Data'],
+            counts: [0]
+        };
+    }
+    
+    // Get counts in the order of sorted labels
+    const counts = timeLabels.map(label => timeSlots[label]);
+    
+    return {
+        labels: timeLabels,
+        counts: counts
+    };
 }
 </script>
 {% endblock %}

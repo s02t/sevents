@@ -402,3 +402,34 @@ async def delete_image(
     db.commit()
     
     return {"success": True}
+
+@router.post("/submissions/{submission_id}/toggle-status")
+async def toggle_submission_status(
+    submission_id: int,
+    db: Session = Depends(get_db)
+):
+    # Find the submission
+    submission = db.query(Submission).filter(Submission.id == submission_id).options(
+        joinedload(Submission.qr_code)
+    ).first()
+    
+    if not submission or not submission.qr_code:
+        raise HTTPException(status_code=404, detail="Submission or QR code not found")
+    
+    # Toggle the status
+    submission.qr_code.status = not submission.qr_code.status
+    
+    # Update the check-in timestamp if being checked in
+    if submission.qr_code.status:
+        submission.qr_code.checked_in_at = datetime.now(pytz.timezone('Asia/Bangkok'))
+    else:
+        # If marking as pending, clear the check-in timestamp
+        submission.qr_code.checked_in_at = None
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "status": submission.qr_code.status,
+        "checked_in_at": submission.qr_code.checked_in_at.isoformat() if submission.qr_code.checked_in_at else None
+    }

@@ -1,163 +1,195 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>sevents</title>
-    <link rel="stylesheet" type="text/css" href="{{url_for('static', path='/css/styles.css')}}">
+    <title>EventQR</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" type="text/css" href="{{url_for('static', path='/css/bootstrap.css')}}">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.2.1/css/dataTables.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', path='/css/styles.css')}}">
     <style>
-        /* Custom styling for markdown content */
-        .markdown-content {
-            line-height: 1.6;
+        :root {
+            /* Modern Color Palette */
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4cc9f0;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --neutral-color: #e9ecef;
+            --success-color: #4caf50;
+            --warning-color: #ff9e00;
+            --danger-color: #f72585;
+            --info-color: #0096c7;
+            
+            /* Font variables */
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-headings: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
+        
+        body {
+            font-family: var(--font-main);
+            background-color: #f5f7fa;
+            background-image: linear-gradient(135deg, rgba(67, 97, 238, 0.03) 0%, rgba(76, 201, 240, 0.03) 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        main {
+            flex: 1 0 auto;
+        }
+
+        /* Improved Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-headings);
+            font-weight: 600;
+            color: var(--dark-color);
+            letter-spacing: -0.02em;
+        }
+        
+        /* Enhanced Cards */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Modern Buttons */
+        .btn {
+            font-weight: 500;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4361ee, #3f37c9);
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.25);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3f37c9, #2b0b98);
+            box-shadow: 0 6px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        /* Form Controls */
+        .form-control {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--neutral-color);
+            transition: all 0.2s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+        }
+        
+        /* Custom Markdown Content Styling */
+        .markdown-content {
+            line-height: 1.7;
+            color: #495057;
+        }
+        
         .markdown-content h1, .markdown-content h2, .markdown-content h3, 
         .markdown-content h4, .markdown-content h5, .markdown-content h6 {
             margin-top: 1.5rem;
             margin-bottom: 1rem;
+            color: var(--dark-color);
         }
+        
         .markdown-content p {
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
+        
         .markdown-content ul, .markdown-content ol {
-            margin-bottom: 1rem;
-            padding-left: 2rem;
+            margin-bottom: 1.25rem;
+            padding-left: 1.5rem;
         }
+        
         .markdown-content blockquote {
-            border-left: 4px solid #e9ecef;
-            padding-left: 1rem;
-            color: #6c757d;
-            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary-color);
+            padding: 0.5rem 0 0.5rem 1.25rem;
+            margin-bottom: 1.25rem;
+            background-color: rgba(67, 97, 238, 0.05);
+            border-radius: 0 8px 8px 0;
         }
+        
         .markdown-content pre, .markdown-content code {
             background-color: #f8f9fa;
             padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
+            border-radius: 4px;
             font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            color: var(--secondary-color);
         }
+        
         .markdown-content pre {
             padding: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
             overflow-x: auto;
+            border-radius: 8px;
         }
+        
         .markdown-content img {
             max-width: 100%;
             height: auto;
-            margin-bottom: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
         }
+        
         .markdown-content a {
-            color: #0d6efd;
+            color: var(--primary-color);
             text-decoration: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
+        
         .markdown-content a:hover {
+            color: var(--secondary-color);
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
     {% include 'navbar.html' %}
-    {% block content %}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
 
-    {% endblock %}
-    <!-- <div id="layoutSidenav">
-        <div id="layoutSidenav_nav">
-            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
-                <div class="sb-sidenav-menu">
-                    <div class="nav">
-                        <div class="sb-sidenav-menu-heading">Core</div>
-                        <a class="nav-link" href="index.html">
-                            <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
-                            Dashboard
-                        </a>
-                        <div class="sb-sidenav-menu-heading">Interface</div>
-                        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseLayouts" aria-expanded="false" aria-controls="collapseLayouts">
-                            <div class="sb-nav-link-icon"><i class="fas fa-columns"></i></div>
-                            Layouts
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseLayouts" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link" href="layout-static.html">Static Navigation</a>
-                                <a class="nav-link" href="layout-sidenav-light.html">Light Sidenav</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePages" aria-expanded="false" aria-controls="collapsePages">
-                            <div class="sb-nav-link-icon"><i class="fas fa-book-open"></i></div>
-                            Pages
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapsePages" aria-labelledby="headingTwo" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav accordion" id="sidenavAccordionPages">
-                                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseAuth" aria-expanded="false" aria-controls="pagesCollapseAuth">
-                                    Authentication
-                                    <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                                </a>
-                                <div class="collapse" id="pagesCollapseAuth" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordionPages">
-                                    <nav class="sb-sidenav-menu-nested nav">
-                                        <a class="nav-link" href="login.html">Login</a>
-                                        <a class="nav-link" href="register.html">Register</a>
-                                        <a class="nav-link" href="password.html">Forgot Password</a>
-                                    </nav>
-                                </div>
-                                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError" aria-expanded="false" aria-controls="pagesCollapseError">
-                                    Error
-                                    <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                                </a>
-                                <div class="collapse" id="pagesCollapseError" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordionPages">
-                                    <nav class="sb-sidenav-menu-nested nav">
-                                        <a class="nav-link" href="401.html">401 Page</a>
-                                        <a class="nav-link" href="404.html">404 Page</a>
-                                        <a class="nav-link" href="500.html">500 Page</a>
-                                    </nav>
-                                </div>
-                            </nav>
-                        </div>
-                        <div class="sb-sidenav-menu-heading">Addons</div>
-                        <a class="nav-link" href="charts.html">
-                            <div class="sb-nav-link-icon"><i class="fas fa-chart-area"></i></div>
-                            Charts
-                        </a>
-                        <a class="nav-link" href="tables.html">
-                            <div class="sb-nav-link-icon"><i class="fas fa-table"></i></div>
-                            Tables
-                        </a>
-                    </div>
+    <footer class="footer py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-muted">© 2024 EventQR. All rights reserved.</p>
                 </div>
-                <div class="sb-sidenav-footer">
-                    <div class="small">Logged in as:</div>
-                    Start Bootstrap
+                <div class="col-md-6 text-center text-md-end">
+                    <ul class="list-inline mb-0">
+                        <li class="list-inline-item">
+                            <a href="#" class="text-muted">Privacy Policy</a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="#" class="text-muted">Terms of Service</a>
+                        </li>
+                        <li class="list-inline-item">
+                            <a href="#" class="text-muted">Help Center</a>
+                        </li>
+                    </ul>
                 </div>
-            </nav>
+            </div>
         </div>
-        <div id="layoutSidenav_content">
-            <main>
-                
-                <div class="container-fluid px-4 ">
-                    <h1 class="mt-4">Dashboard</h1>
-                    <ol class="breadcrumb mb-4">
-                        <li class="breadcrumb-item active">Dashboard</li>
-                    </ol>
-                    
-                    
-                        
-
-                   
-                </div>
-            </main>
-            <!-- <footer class="py-4 bg-light mt-auto">
-                <div class="container-fluid px-4">
-                    <div class="d-flex align-items-center justify-content-between small">
-                        <div class="text-muted">Copyright &copy; Your Website 2023</div>
-                        <div>
-                            <a href="#">Privacy Policy</a>
-                            &middot;
-                            <a href="#">Terms &amp; Conditions</a>
-                        </div>
-                    </div>
-                </div>
-            </footer> -->
-        
-
+    </footer>
   
     <script src="{{ url_for('static', path='/js/jquery-slim.js')}}"></script>
     <script src="{{ url_for('static', path='/js/jsQR.min.js')}}"></script>
@@ -177,25 +209,67 @@
                     el.innerHTML = marked.parse(el.innerHTML);
                 }
             });
+            
+            // Initialize tooltips
+            const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(tooltip => {
+                new bootstrap.Tooltip(tooltip);
+            });
+            
+            // Initialize popovers
+            const popovers = document.querySelectorAll('[data-bs-toggle="popover"]');
+            popovers.forEach(popover => {
+                new bootstrap.Popover(popover);
+            });
         });
     </script>
-    <!-- https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js -->
 </body>
 </html>
 
 {% block script %}
 <script type="text/javascript">
-	$(document).ready(function()
-	{
-		$("#datatable").DataTable()
-	});
-	</script>
-	<script type="text/javascript">
-		function delete_item(id)
-		{
-			fetch("/item/delete/"+id, {method:'DELETE'})
-			.then(response => response.json())
-			.then(data => document.getElementById("result").innerHTML = data.message)
-		}
-	</script>
+    $(document).ready(function() {
+        $("#datatable").DataTable({
+            responsive: true,
+            pageLength: 10,
+            language: {
+                search: "",
+                searchPlaceholder: "Search records..."
+            },
+            dom: "<'row'<'col-md-6'l><'col-md-6'f>>" +
+                 "<'row'<'col-sm-12'tr>>" +
+                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            initComplete: function() {
+                $('.dataTables_filter input').addClass('form-control');
+                $('.dataTables_length select').addClass('form-select');
+            }
+        });
+    });
+    
+    function delete_item(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#4361ee',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch("/item/delete/"+id, {method:'DELETE'})
+                .then(response => response.json())
+                .then(data => {
+                    Swal.fire(
+                        'Deleted!',
+                        data.message,
+                        'success'
+                    ).then(() => {
+                        location.reload();
+                    });
+                });
+            }
+        });
+    }
+</script>
 {% endblock %}

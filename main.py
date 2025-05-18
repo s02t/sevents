@@ -20,10 +20,11 @@ Base.metadata.create_all(bind=engine)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/qr_codes", StaticFiles(directory="qr_codes"), name="qr_codes")
+app.mount("/qr-codes", StaticFiles(directory="qr_codes"), name="qr_codes")
 
 # Create directories if they don't exist
 os.makedirs("static/uploads", exist_ok=True)
+os.makedirs("static/sounds", exist_ok=True)
 os.makedirs("qr_codes", exist_ok=True)
 
 templates = Jinja2Templates(directory="templates")

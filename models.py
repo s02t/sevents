@@ -12,6 +12,7 @@ class QRCode(Base):
     uuid= Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(Boolean, default=False)
+    checked_in_at = Column(DateTime, nullable=True)  # New column to record check-in time
 
     # Submission relationship
     submission_id = Column(Integer, ForeignKey("submissions.id"), unique=True)
