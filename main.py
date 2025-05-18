@@ -5,10 +5,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from routers import qr, submission, form
-from models import Base, QRCode, FormModel, FormField, Submission
+from routers import qr, submission, form, auth
+from models import Base, QRCode, FormModel, FormField, Submission, User
 from database import engine
-#from dependencies import get_db
+from dependencies import get_db, get_admin_user
 from sqlalchemy.orm import Session
 import os
 
@@ -38,27 +38,32 @@ templates = Jinja2Templates(directory="templates")
 # async def clear_template_cache():
 #     templates.env.cache.clear()  
 
+# Admin dependency for protected routes
+admin_dependency = Annotated[User, Depends(get_admin_user)]
+db_dependency = Annotated[Session, Depends(get_db)]
 
-#db_dependency = Annotated[Session, Depends(get_db)]
 # Routes
-
-
 @app.get("/")
 async def root(request: Request):
     return RedirectResponse(url="/form", status_code=status.HTTP_302_FOUND)
-# @app.get("/")
-# async def read_root(request: Request, db: db_dependency):
-    
-#     qr_codes = db.query(QRCode).order_by(QRCode.created_at.desc()).all()
-    
-#     return templates.TemplateResponse("submissions.html", {
-#         "request": request,
-#         "qr_codes": qr_codes,
-        
-#     })
 
+# Admin login shortcut
+@app.get("/admin")
+async def admin_login(request: Request):
+    return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
 
+# Include routers
+app.include_router(auth.router)
 
-app.include_router(qr.router)
+# Protected admin router for QR scanning
+app.include_router(
+    qr.router,
+    dependencies=[Depends(get_admin_user)]
+)
+
+# Submission router - the submission.py file handles authorization internally
+# so we include it without global protection since registration is public
 app.include_router(submission.router)
+
+# Form router - selectively protect routes within the router
 app.include_router(form.router)

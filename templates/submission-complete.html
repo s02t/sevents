@@ -98,7 +98,7 @@
                     <p class="mb-4">Present this QR code when you arrive at the event for check-in.</p>
                     
                     <div class="qr-container mx-auto mb-3">
-                        <img src="/qr/qr-codes/{{ submission.qr_code.uuid }}.png" class="img-fluid" alt="QR Code">
+                        <img src="{{ qr_image_path }}" class="img-fluid" alt="QR Code">
                     </div>
                     
                     <div class="qr-code-id">ID: {{ submission.qr_code.uuid }}</div>

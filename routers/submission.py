@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from starlette import status
-from models import QRCode, Submission, FormModel, FormField, EventImage
+from models import QRCode, Submission, FormModel, FormField, EventImage, User
 from sqlalchemy.orm import Session, joinedload
-from dependencies import get_db
+from dependencies import get_db, get_admin_user
 from starlette.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import qrcode
@@ -27,6 +27,7 @@ router = APIRouter(
 )
 
 db_dependency = Annotated[Session, Depends(get_db)]
+admin_dependency = Annotated[User, Depends(get_admin_user)]
 
 # @router.get("/")
 # async def read_root(request: Request):
@@ -35,6 +36,7 @@ db_dependency = Annotated[Session, Depends(get_db)]
         
 #     })
 
+# Make the submission-complete endpoint public (no admin dependency)
 @router.get("/submission-complete/{submission_id}", response_class=HTMLResponse)
 async def completed_submission(request: Request, submission_id: int, 
 db: Session = Depends(get_db)):
@@ -48,9 +50,11 @@ db: Session = Depends(get_db)):
     return templates.TemplateResponse("submission-complete.html", {
         "request": request,
         "submission": submission,
-        "fields": fields
+        "fields": fields,
+        "qr_image_path": f"/submission/qr/{submission.qr_code.uuid}"
     })  
 
+# Public registration form - no auth needed
 @router.get("/create/{form_id}", response_class=HTMLResponse)
 async def new_submission_form(request: Request, form_id: int, 
 db: Session = Depends(get_db)):
@@ -72,6 +76,7 @@ db: Session = Depends(get_db)):
         "new_submission_form": True
     })
 
+# Public submission handler - no auth needed
 @router.post("/submit")
 async def create_submission(
     request: Request,
@@ -124,10 +129,12 @@ async def create_submission(
     db.add(new_qr)
     db.commit()
     
+    # Redirect to public submission-complete page
     return RedirectResponse(url=f"/submission/submission-complete/{new_submission.id}", status_code=303)
 
+# Public QR code endpoint for public view
 @router.get("/qr/{uuid}", response_class=HTMLResponse)
-async def get_qr_code(uuid: str, db: Session = Depends(get_db)):
+async def get_public_qr_code(uuid: str, db: Session = Depends(get_db)):
     qr_record = db.query(QRCode).filter(QRCode.uuid == uuid).first()
     if not qr_record:
         raise HTTPException(status_code=404, detail="QR code not found")
@@ -149,6 +156,31 @@ async def get_qr_code(uuid: str, db: Session = Depends(get_db)):
     
     return Response(content=buffer.getvalue(), media_type="image/png")
 
+# Admin-only QR code endpoint for admin operations
+@router.get("/admin/qr/{uuid}", response_class=HTMLResponse, dependencies=[Depends(get_admin_user)])
+async def get_admin_qr_code(uuid: str, db: Session = Depends(get_db)):
+    qr_record = db.query(QRCode).filter(QRCode.uuid == uuid).first()
+    if not qr_record:
+        raise HTTPException(status_code=404, detail="QR code not found")
+    
+    # Generate QR code image
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_record.uuid)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    
+    return Response(content=buffer.getvalue(), media_type="image/png")
+
+# Public registration form for modal - no auth needed
 @router.get("/modal-form/{form_id}", response_class=HTMLResponse)
 async def modal_registration_form(request: Request, form_id: int, 
 db: Session = Depends(get_db)):

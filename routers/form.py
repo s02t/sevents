@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Path, Query, HTTPException, Request, status, Form, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse
 from starlette import status
-from models import FormModel, Submission, FormField, EventImage
+from models import FormModel, Submission, FormField, EventImage, User
 from sqlalchemy.orm import Session, joinedload
 from database import SessionLocal
-from dependencies import get_db
+from dependencies import get_db, get_admin_user
 from starlette.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import qrcode
@@ -32,6 +32,7 @@ router = APIRouter(
     tags=['form']
 )
 db_dependency = Annotated[Session, Depends(get_db)]
+admin_dependency = Annotated[User, Depends(get_admin_user)]
 
 class FieldRequest(BaseModel):
     field_name: str
@@ -51,7 +52,7 @@ async def test_data(db: db_dependency):
         ]
     }
     
-@router.get("")
+@router.get("", dependencies=[Depends(get_admin_user)])
 async def read_root(request: Request, db: db_dependency):
     
     forms = db.query(FormModel).all()
@@ -61,7 +62,7 @@ async def read_root(request: Request, db: db_dependency):
         "forms": forms
     })
 
-@router.post("/forms/")
+@router.post("/forms/", dependencies=[Depends(get_admin_user)])
 async def create_form(
     request: Request,
     db: db_dependency,
@@ -155,7 +156,7 @@ async def create_form(
     
     return RedirectResponse(url=f"/form/forms/{new_form.id}/edit", status_code=303)
 
-@router.post("/forms/{form_id}/update")
+@router.post("/forms/{form_id}/update", dependencies=[Depends(get_admin_user)])
 async def update_form(
     request: Request,
     form_id: int,
@@ -225,7 +226,7 @@ async def update_form(
     
     return RedirectResponse(url=f"/form/forms/{form_id}/edit", status_code=303)
 
-@router.get("/forms/{form_id}/edit", response_class=HTMLResponse)
+@router.get("/forms/{form_id}/edit", response_class=HTMLResponse, dependencies=[Depends(get_admin_user)])
 async def edit_form(
     request: Request,
     form_id: int,
@@ -244,7 +245,7 @@ async def edit_form(
         "forms": db.query(FormModel).all()
     })
 
-@router.post("/forms/{form_id}/fields")
+@router.post("/forms/{form_id}/fields", dependencies=[Depends(get_admin_user)])
 async def add_field(
     form_id: int,
     field_data: FieldRequest,
@@ -270,7 +271,7 @@ async def add_field(
     
     return {"message": "Field added successfully", "field_id": new_field.id}
 
-@router.delete("/forms/{form_id}/fields/{field_id}")
+@router.delete("/forms/{form_id}/fields/{field_id}", dependencies=[Depends(get_admin_user)])
 async def delete_field(
     form_id: int,
     field_id: int,
@@ -285,7 +286,7 @@ async def delete_field(
     
     return {"message": "Field deleted successfully"}
 
-@router.get("/forms/{form_id}", response_class=HTMLResponse)
+@router.get("/forms/{form_id}", response_class=HTMLResponse, dependencies=[Depends(get_admin_user)])
 async def view_form_submissions(
     request: Request,
     form_id: int,
@@ -308,7 +309,7 @@ async def view_form_submissions(
         "event_images": event_images
     })
 
-@router.get("/forms/{form_id}/images")
+@router.get("/forms/{form_id}/images", dependencies=[Depends(get_admin_user)])
 async def get_form_images(
     form_id: int,
     db: Session = Depends(get_db)
@@ -327,7 +328,7 @@ async def get_form_images(
         ]
     }
 
-@router.post("/forms/{form_id}/images/{image_id}/set-primary")
+@router.post("/forms/{form_id}/images/{image_id}/set-primary", dependencies=[Depends(get_admin_user)])
 async def set_primary_image(
     form_id: int,
     image_id: int,
@@ -353,7 +354,7 @@ async def set_primary_image(
     
     return {"success": True}
 
-@router.delete("/forms/{form_id}/images/{image_id}")
+@router.delete("/forms/{form_id}/images/{image_id}", dependencies=[Depends(get_admin_user)])
 async def delete_image(
     form_id: int,
     image_id: int,
@@ -403,7 +404,7 @@ async def delete_image(
     
     return {"success": True}
 
-@router.post("/submissions/{submission_id}/toggle-status")
+@router.post("/submissions/{submission_id}/toggle-status", dependencies=[Depends(get_admin_user)])
 async def toggle_submission_status(
     submission_id: int,
     db: Session = Depends(get_db)
