@@ -90,6 +90,7 @@ class FormField(Base):
 class Submission(Base):
     __tablename__ = "submissions"
     id = Column(Integer, primary_key=True, index=True)
+    hash_id = Column(String, unique=True, index=True, default=lambda: uuid.uuid4().hex[:12])  # 12-char random hash
     
     # Store dynamic form field values as JSON
     field_values = Column(JSON, nullable=False, default=dict)

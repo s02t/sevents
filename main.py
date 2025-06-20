@@ -12,9 +12,19 @@ from dependencies import get_db, get_admin_user
 from sqlalchemy.orm import Session
 import os
 import uuid
+from starlette.middleware.sessions import SessionMiddleware
+import secrets
 
 # FastAPI setup
 app = FastAPI()
+
+# Add session middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY", secrets.token_urlsafe(32)),
+    session_cookie="session",
+    max_age=86400  # 24 hours
+)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -71,12 +81,15 @@ async def ensure_form_hash_ids():
 # Routes
 @app.get("/")
 async def root(request: Request):
-    return RedirectResponse(url="/form", status_code=status.HTTP_302_FOUND)
+    # Redirect to login if not authenticated
+    if not request.session.get("user_id"):
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/form", status_code=status.HTTP_303_SEE_OTHER)
 
 # Admin login shortcut
 @app.get("/admin")
 async def admin_login(request: Request):
-    return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
 # Include routers
 app.include_router(auth.router)

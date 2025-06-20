@@ -38,10 +38,10 @@ admin_dependency = Annotated[User, Depends(get_admin_user)]
 #     })
 
 # Make the submission-complete endpoint public (no admin dependency)
-@router.get("/submission-complete/{submission_id}", response_class=HTMLResponse)
-async def completed_submission(request: Request, submission_id: int, 
+@router.get("/submission-complete/{submission_hash}", response_class=HTMLResponse)
+async def completed_submission(request: Request, submission_hash: str, 
 db: Session = Depends(get_db)):
-    submission = db.query(Submission).filter(Submission.id == submission_id).options(joinedload(Submission.qr_code)).first()
+    submission = db.query(Submission).filter(Submission.hash_id == submission_hash).first()
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     
@@ -156,9 +156,9 @@ async def create_submission(
             "event_date": form.event_date.strftime('%A, %B %d, %Y') if form.event_date else "",
             "event_time": form.event_time,
             "qr_uuid": qr_id,
-            "submission_id": new_submission.id,
+            "submission_hash": new_submission.hash_id,
             "registration_date": submission_time.strftime('%Y-%m-%d %H:%M'),
-            "event_url": f"{request.base_url}submission/submission-complete/{new_submission.id}",
+            "event_url": f"{request.base_url}submission/submission-complete/{new_submission.hash_id}",
             "organizer_name": "sevents",
             "current_year": datetime.now().year
         }
@@ -171,8 +171,8 @@ async def create_submission(
             email_data
         )
     
-    # Redirect to public submission-complete page
-    return RedirectResponse(url=f"/submission/submission-complete/{new_submission.id}", status_code=303)
+    # Redirect to public submission-complete page using hash_id
+    return RedirectResponse(url=f"/submission/submission-complete/{new_submission.hash_id}", status_code=303)
 
 # Public QR code endpoint for public view
 @router.get("/qr/{uuid}", response_class=HTMLResponse)

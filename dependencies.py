@@ -1,11 +1,7 @@
 from database import SessionLocal
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import Depends, HTTPException, status, Request
 from models import User
 from sqlalchemy.orm import Session
-import secrets
-
-security = HTTPBasic()
 
 def get_db():
     db = SessionLocal()
@@ -14,13 +10,19 @@ def get_db():
     finally:
         db.close()
 
-def get_current_user(credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == credentials.username).first()
-    if not user or not user.verify_password(credentials.password):
+def get_current_user(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
+            detail="Not authenticated",
+        )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
         )
     return user
 

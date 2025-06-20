@@ -461,6 +461,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Registration ID</th>
                             <th>QR Code</th>
                             <th>Name</th>
                             <th>Email</th>
@@ -477,6 +478,7 @@
                             data-field-values='{{ item.field_values|tojson }}'
                             class="submission-row">
                             <th scope="row">{{ loop.index }}</th>
+                            <td>{{ item.hash_id }}</td>
                             <td>
                                 <img src="/qr/qr-codes/{{ item.qr_code.uuid }}.png" 
                                      class="img-thumbnail qr-preview" 
@@ -862,8 +864,8 @@ function loadRecentActivity() {
     
     // Sort submissions by submission date (newest first)
     submissions.sort((a, b) => {
-        const dateA = new Date(a.querySelector('td:nth-child(5)').textContent.trim());
-        const dateB = new Date(b.querySelector('td:nth-child(5)').textContent.trim());
+        const dateA = new Date(a.querySelector('td:nth-child(6)').textContent.trim());  // Updated index
+        const dateB = new Date(b.querySelector('td:nth-child(6)').textContent.trim());  // Updated index
         return dateB - dateA;
     });
     
@@ -875,8 +877,8 @@ function loadRecentActivity() {
     
     // Add recent activities to the feed
     recentSubmissions.forEach(submission => {
-        const name = submission.querySelector('td:nth-child(3)').textContent.trim();
-        const date = submission.querySelector('td:nth-child(5)').textContent.trim();
+        const name = submission.querySelector('td:nth-child(4)').textContent.trim();  // Updated index
+        const date = submission.querySelector('td:nth-child(6)').textContent.trim();  // Updated index
         const status = submission.getAttribute('data-status') === 'true' ? 'checked in' : 'registered';
         const timeAgo = getTimeAgo(new Date(date));
         

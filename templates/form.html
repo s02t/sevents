@@ -1,268 +1,374 @@
 <!-- {{ forms|length }} forms found -->
 
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <div class="container py-5">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="display-5 fw-bold mb-4">Event Dashboard</h1>
-        </div>
+  <!-- Page Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-5 fw-bold mb-4">Event Dashboard</h1>
     </div>
+  </div>
 
-    <!-- Dashboard Stats -->
-    <div class="row mb-5">
-        <div class="col-md-3 mb-4 mb-md-0">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="bi bi-calendar-event"></i>
-                </div>
-                <h3>{{ forms|length }}</h3>
-                <p>Total Events</p>
-            </div>
+  <!-- Dashboard Stats -->
+  <div class="row mb-5">
+    <div class="col-md-3 mb-4 mb-md-0">
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="bi bi-calendar-event"></i>
         </div>
-        <div class="col-md-3 mb-4 mb-md-0">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="bi bi-people"></i>
-                </div>
-                <h3 id="total-submissions">0</h3>
-                <p>Total Registrations</p>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4 mb-md-0">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="bi bi-qr-code-scan"></i>
-                </div>
-                <h3 id="total-scanned">0</h3>
-                <p>QR Codes Scanned</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="bi bi-clipboard-check"></i>
-                </div>
-                <h3 id="attendance-rate">0%</h3>
-                <p>Attendance Rate</p>
-            </div>
-        </div>
+        <h3>{{ forms|length }}</h3>
+        <p>Total Events</p>
+      </div>
     </div>
+    <div class="col-md-3 mb-4 mb-md-0">
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="bi bi-people"></i>
+        </div>
+        <h3 id="total-submissions">0</h3>
+        <p>Total Registrations</p>
+      </div>
+    </div>
+    <div class="col-md-3 mb-4 mb-md-0">
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="bi bi-qr-code-scan"></i>
+        </div>
+        <h3 id="total-scanned">0</h3>
+        <p>QR Codes Scanned</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="bi bi-clipboard-check"></i>
+        </div>
+        <h3 id="attendance-rate">0%</h3>
+        <p>Attendance Rate</p>
+      </div>
+    </div>
+  </div>
 
-    <!-- Search and Create New Event -->
-    <div class="card mb-5">
-        <div class="card-body d-md-flex justify-content-between align-items-center p-4">
-            <div class="input-group mb-3 mb-md-0" style="max-width: 500px;">
-                <span class="input-group-text border-0 bg-white">
-                    <i class="bi bi-search"></i>
-                </span>
-                <input type="text" id="event-search" class="form-control border-0 shadow-none" placeholder="Search events by title, description or location...">
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newFormModal">
-                    <i class="bi bi-plus-circle me-2"></i> Create New Event
-                </button>
-                <a class="btn btn-accent" href="/qr/scan-real">
-                    <i class="bi bi-upc-scan me-2"></i> Scan QR Code
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Event Cards -->
-    <div class="row" id="events-container">
-        {% for form in forms %}
-        <div class="col-md-6 col-lg-4 mb-4 event-item">
-            <div class="event-card h-100">
-                {% if form.images and form.images|length > 0 %}
-                <div class="event-card-image mb-3" style="height: 160px; overflow: hidden; border-radius: 10px; background-color: #f5f7fa;">
-                    <img src="{{ form.images[0].image_url }}" alt="{{ form.title }}" 
-                        class="w-100 h-100 object-fit-cover">
-                </div>
-                {% endif %}
-                
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="mb-0 text-truncate">{{ form.title }}</h5>
-                    <span class="badge bg-primary">ID: {{ form.id }}</span>
-                </div>
-                
-                <!-- Event Description -->
-<div class="event-description mb-3">
-    <div class="mb-0 text-break markdown-content description-preview" 
-       style="overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">
-        {{ form.description }}
-    </div>
-</div>
-                
-                <!-- Event Metadata -->
-                <div class="event-meta mb-3">
-                    <div class="d-flex align-items-center mb-1">
-                        <i class="bi bi-geo-alt me-2 text-primary"></i>
-                        <span>{{ form.location or 'No location specified' }}</span>
-                    </div>
-                    <div class="d-flex align-items-center mb-1">
-                        <i class="bi bi-calendar3 me-2 text-primary"></i>
-                        <span>
-                            {% if form.event_date %}
-                                {{ form.event_date.strftime('%B %d, %Y') }}
-                                {% if form.event_time %}at {{ form.event_time }}{% endif %}
-                            {% else %}
-                                Date not specified
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-clock-history me-2 text-muted"></i>
-                        <span class="text-muted">Created: {{ form.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-                    </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2 flex-wrap mt-auto">
-                    <a href="/form/forms/{{ form.id }}" class="btn btn-sm btn-primary d-flex align-items-center justify-content-center flex-grow-1">
-                        <i class="bi bi-table me-1"></i> Submissions
-                    </a>
-                    <a href="/form/forms/{{ form.id }}/edit" class="btn btn-sm btn-info d-flex align-items-center justify-content-center flex-grow-1">
-                        <i class="bi bi-pencil me-1"></i> Edit
-                    </a>
-                    <button class="btn btn-sm btn-warning d-flex align-items-center justify-content-center flex-grow-1" 
-                            onclick="showRegisterModal('{{ form.hash_id }}', '{{ form.title }}')">
-                        <i class="bi bi-pencil-square me-1"></i> Register
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center" 
-                            onclick="copyLink('/submission/create/{{ form.hash_id }}')"
-                            data-bs-toggle="tooltip" title="Copy registration link">
-                        <i class="bi bi-link-45deg"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- No Events Message -->
-    {% if forms|length == 0 %}
-    <div class="text-center py-5 empty-state">
-        <div class="empty-state-icon mb-4">
-            <i class="bi bi-calendar-x"></i>
-        </div>
-        <h3 class="mb-3">No Events Found</h3>
-        <p class="text-muted mb-4">Get started by creating your first event</p>
-        <button class="btn btn-lg btn-primary" data-bs-toggle="modal" data-bs-target="#newFormModal">
-            <i class="bi bi-plus-circle me-2"></i> Create New Event
+  <!-- Search and Create New Event -->
+  <div class="card mb-5">
+    <div
+      class="card-body d-md-flex justify-content-between align-items-center p-4"
+    >
+      <div class="input-group mb-3 mb-md-0" style="max-width: 500px">
+        <span class="input-group-text border-0 bg-white">
+          <i class="bi bi-search"></i>
+        </span>
+        <input
+          type="text"
+          id="event-search"
+          class="form-control border-0 shadow-none"
+          placeholder="Search events by title, description or location..."
+        />
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button
+          class="btn btn-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#newFormModal"
+        >
+          <i class="bi bi-plus-circle me-2"></i> Create New Event
         </button>
+        <a class="btn btn-accent" href="/qr/scan-real">
+          <i class="bi bi-upc-scan me-2"></i> Scan QR Code
+        </a>
+      </div>
     </div>
-    {% endif %}
+  </div>
+
+  <!-- Event Cards -->
+  <div class="row" id="events-container">
+    {% for form in forms %}
+    <div class="col-md-6 col-lg-4 mb-4 event-item">
+      <div class="event-card h-100">
+        {% if form.images and form.images|length > 0 %}
+        <div
+          class="event-card-image mb-3"
+          style="
+            height: 160px;
+            overflow: hidden;
+            border-radius: 10px;
+            background-color: #f5f7fa;
+          "
+        >
+          <img
+            src="{{ form.images[0].image_url }}"
+            alt="{{ form.title }}"
+            class="w-100 h-100 object-fit-cover"
+          />
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h5 class="mb-0 text-truncate">{{ form.title }}</h5>
+          <!-- <span class="badge bg-primary">ID: {{ form.id }}</span> -->
+        </div>
+
+        <!-- Event Description -->
+        <div class="event-description mb-3">
+          <div
+            class="mb-0 text-break markdown-content description-preview"
+            style="
+              overflow: hidden;
+              text-overflow: ellipsis;
+              display: -webkit-box;
+              -webkit-line-clamp: 4;
+              -webkit-box-orient: vertical;
+            "
+          >
+            {{ form.description }}
+          </div>
+        </div>
+
+        <!-- Event Metadata -->
+        <div class="event-meta mb-3">
+          <div class="d-flex align-items-center mb-1">
+            <i class="bi bi-geo-alt me-2 text-primary"></i>
+            <span>{{ form.location or 'No location specified' }}</span>
+          </div>
+          <div class="d-flex align-items-center mb-1">
+            <i class="bi bi-calendar3 me-2 text-primary"></i>
+            <span>
+              {% if form.event_date %} {{ form.event_date.strftime('%B %d, %Y')
+              }} {% if form.event_time %}at {{ form.event_time }}{% endif %} {%
+              else %} Date not specified {% endif %}
+            </span>
+          </div>
+          <div class="d-flex align-items-center">
+            <i class="bi bi-clock-history me-2 text-muted"></i>
+            <span class="text-muted"
+              >Created: {{ form.created_at.strftime('%Y-%m-%d %H:%M') }}</span
+            >
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 flex-wrap mt-auto">
+          <a
+            href="/form/forms/{{ form.id }}"
+            class="btn btn-sm btn-primary d-flex align-items-center justify-content-center flex-grow-1"
+          >
+            <i class="bi bi-table me-1"></i> Submissions
+          </a>
+          <a
+            href="/form/forms/{{ form.id }}/edit"
+            class="btn btn-sm btn-info d-flex align-items-center justify-content-center flex-grow-1"
+          >
+            <i class="bi bi-pencil me-1"></i> Edit
+          </a>
+          <!-- <button
+            class="btn btn-sm btn-warning d-flex align-items-center justify-content-center flex-grow-1"
+            onclick="showRegisterModal('{{ form.hash_id }}', '{{ form.title }}')"
+          >
+            <i class="bi bi-pencil-square me-1"></i> Register
+          </button> -->
+          <button
+            class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+            onclick="copyLink('/submission/create/{{ form.hash_id }}')"
+            data-bs-toggle="tooltip"
+            title="Copy registration link"
+          >
+            <i class="bi bi-link-45deg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- No Events Message -->
+  {% if forms|length == 0 %}
+  <div class="text-center py-5 empty-state">
+    <div class="empty-state-icon mb-4">
+      <i class="bi bi-calendar-x"></i>
+    </div>
+    <h3 class="mb-3">No Events Found</h3>
+    <p class="text-muted mb-4">Get started by creating your first event</p>
+    <button
+      class="btn btn-lg btn-primary"
+      data-bs-toggle="modal"
+      data-bs-target="#newFormModal"
+    >
+      <i class="bi bi-plus-circle me-2"></i> Create New Event
+    </button>
+  </div>
+  {% endif %}
 </div>
 
 <!-- New Form Modal -->
 <div class="modal fade" id="newFormModal">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form action="/form/forms/" method="POST" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-calendar-plus me-2"></i>Create New Event</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Event Title</label>
-                        <input type="text" name="title" class="form-control" placeholder="Enter event title" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Description</label>
-                        <textarea name="description" class="form-control" rows="4" placeholder="Enter event description" required></textarea>
-                        <div class="form-text">You can use Markdown formatting</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label fw-semibold">Location</label>
-                            <input type="text" name="location" class="form-control" placeholder="Enter event location">
-                        </div>
-                        <div class="col-md-3 mb-4">
-                            <label class="form-label fw-semibold">Event Date</label>
-                            <input type="date" name="event_date" class="form-control">
-                        </div>
-                        <div class="col-md-3 mb-4">
-                            <label class="form-label fw-semibold">Event Time</label>
-                            <input type="time" name="event_time" class="form-control">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Capacity Settings</label>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="has_capacity" id="capacityUnlimited" value="false" checked>
-                            <label class="form-check-label" for="capacityUnlimited">
-                                Unlimited Capacity
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="has_capacity" id="capacityLimited" value="true">
-                            <label class="form-check-label" for="capacityLimited">
-                                Limited Capacity
-                            </label>
-                        </div>
-                        <div class="capacity-input-group mt-3" style="display: none;">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                <input type="number" class="form-control" name="capacity" id="capacityInput" min="1" placeholder="Enter maximum number of attendees">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Event Images</label>
-                        <input type="file" name="images" class="form-control" accept="image/*" multiple required>
-                        <div class="form-text">Upload at least one image. The first uploaded image will be the primary image.</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x me-1"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i> Create Event
-                    </button>
-                </div>
-            </form>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form action="/form/forms/" method="POST" enctype="multipart/form-data">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-calendar-plus me-2"></i>Create New Event
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
         </div>
+        <div class="modal-body">
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Event Title</label>
+            <input
+              type="text"
+              name="title"
+              class="form-control"
+              placeholder="Enter event title"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea
+              name="description"
+              class="form-control"
+              rows="4"
+              placeholder="Enter event description"
+              required
+            ></textarea>
+            <div class="form-text">You can use Markdown formatting</div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-4">
+              <label class="form-label fw-semibold">Location</label>
+              <input
+                type="text"
+                name="location"
+                class="form-control"
+                placeholder="Enter event location"
+              />
+            </div>
+            <div class="col-md-3 mb-4">
+              <label class="form-label fw-semibold">Event Date</label>
+              <input type="date" name="event_date" class="form-control" />
+            </div>
+            <div class="col-md-3 mb-4">
+              <label class="form-label fw-semibold">Event Time</label>
+              <input type="time" name="event_time" class="form-control" />
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Capacity Settings</label>
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="has_capacity"
+                id="capacityUnlimited"
+                value="false"
+                checked
+              />
+              <label class="form-check-label" for="capacityUnlimited">
+                Unlimited Capacity
+              </label>
+            </div>
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="has_capacity"
+                id="capacityLimited"
+                value="true"
+              />
+              <label class="form-check-label" for="capacityLimited">
+                Limited Capacity
+              </label>
+            </div>
+            <div class="capacity-input-group mt-3" style="display: none">
+              <div class="input-group">
+                <span class="input-group-text"
+                  ><i class="bi bi-person"></i
+                ></span>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="capacity"
+                  id="capacityInput"
+                  min="1"
+                  placeholder="Enter maximum number of attendees"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Event Images</label>
+            <input
+              type="file"
+              name="images"
+              class="form-control"
+              accept="image/*"
+              multiple
+              required
+            />
+            <div class="form-text">
+              Upload at least one image. The first uploaded image will be the
+              primary image.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            <i class="bi bi-x me-1"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Create Event
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
 <!-- Registration Modal -->
 <div class="modal fade" id="registerModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="registerModalTitle">Register for Event</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="registerModalTitle">Register for Event</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="registerModalContent">
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
             </div>
-            <div class="modal-body">
-                <div id="registerModalContent">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading registration form...</p>
-                    </div>
-                </div>
-            </div>
+            <p class="mt-2">Loading registration form...</p>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <style>
-/* Custom styling for empty state */
-.empty-state {
+  /* Custom styling for empty state */
+  .empty-state {
     padding: 3rem 1rem;
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
-}
+  }
 
-.empty-state-icon {
+  .empty-state-icon {
     width: 80px;
     height: 80px;
     display: flex;
@@ -272,180 +378,203 @@
     border-radius: 50%;
     background-color: rgba(67, 97, 238, 0.1);
     color: #4361ee;
-}
+  }
 
-.empty-state-icon i {
+  .empty-state-icon i {
     font-size: 2.5rem;
-}
+  }
 
-/* Event Card Custom Styling */
-.event-card {
+  /* Event Card Custom Styling */
+  .event-card {
     display: flex;
     flex-direction: column;
-}
+  }
 
-/* Accent Button */
-.btn-accent {
+  /* Accent Button */
+  .btn-accent {
     background-color: #4cc9f0;
     color: white;
     box-shadow: 0 4px 10px rgba(76, 201, 240, 0.25);
-}
+  }
 
-.btn-accent:hover {
+  .btn-accent:hover {
     background-color: #25b4e1;
     color: white;
-}
+  }
 </style>
-{% endblock %}
-
-{% block script %}
+{% endblock %} {% block script %}
 <script>
-// Process markdown in event descriptions and strip raw syntax
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.description-preview').forEach(function(el) {
-        // First render the markdown to HTML
-        if (el.textContent) {
-            // Store original text content
-            const originalText = el.textContent.trim();
-            
-            try {
-                // Parse markdown to HTML
-                const parsedHtml = marked.parse(originalText);
-                
-                // Create a temporary div to hold the parsed HTML
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = parsedHtml;
-                
-                // Get the text content from the parsed HTML (strips markdown syntax)
-                const plainText = tempDiv.textContent;
-                
-                // Update the element with cleaned text
-                el.textContent = plainText;
-            } catch (e) {
-                console.error("Error parsing markdown:", e);
-            }
-        }
-    });
-});
+  // Process markdown in event descriptions and strip raw syntax
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".description-preview").forEach(function (el) {
+      // First render the markdown to HTML
+      if (el.textContent) {
+        // Store original text content
+        const originalText = el.textContent.trim();
 
-// Function to show registration modal
-function showRegisterModal(formHashId, formTitle) {
+        try {
+          // Parse markdown to HTML
+          const parsedHtml = marked.parse(originalText);
+
+          // Create a temporary div to hold the parsed HTML
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = parsedHtml;
+
+          // Get the text content from the parsed HTML (strips markdown syntax)
+          const plainText = tempDiv.textContent;
+
+          // Update the element with cleaned text
+          el.textContent = plainText;
+        } catch (e) {
+          console.error("Error parsing markdown:", e);
+        }
+      }
+    });
+  });
+
+  // Function to show registration modal
+  function showRegisterModal(formHashId, formTitle) {
     // Update modal title
-    document.getElementById('registerModalTitle').innerText = 'Register for: ' + formTitle;
-    
+    document.getElementById("registerModalTitle").innerText =
+      "Register for: " + formTitle;
+
     // Show the modal
-    var modal = new bootstrap.Modal(document.getElementById('registerModal'));
+    var modal = new bootstrap.Modal(document.getElementById("registerModal"));
     modal.show();
-    
+
     // Fetch the registration form content
-    fetch('/submission/create/' + formHashId + '?modal=true')
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('registerModalContent').innerHTML = html;
-        })
-        .catch(error => {
-            document.getElementById('registerModalContent').innerHTML = `
+    fetch("/submission/create/" + formHashId + "?modal=true")
+      .then((response) => response.text())
+      .then((html) => {
+        document.getElementById("registerModalContent").innerHTML = html;
+      })
+      .catch((error) => {
+        document.getElementById("registerModalContent").innerHTML = `
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     Failed to load registration form: ${error.message}
                 </div>
             `;
-        });
-}
+      });
+  }
 
-// Function to copy link to clipboard
-function copyLink(path) {
+  // Function to copy link to clipboard
+  function copyLink(path) {
     const fullLink = window.location.origin + path;
-    navigator.clipboard.writeText(fullLink).then(function() {
+    navigator.clipboard.writeText(fullLink).then(
+      function () {
         Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: 'Link copied to clipboard!',
-            showConfirmButton: false,
-            timer: 3000
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Link copied to clipboard!",
+          showConfirmButton: false,
+          timer: 3000,
         });
-    }, function() {
+      },
+      function () {
         Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'error',
-            title: 'Failed to copy link',
-            showConfirmButton: false,
-            timer: 3000
+          toast: true,
+          position: "top-end",
+          icon: "error",
+          title: "Failed to copy link",
+          showConfirmButton: false,
+          timer: 3000,
         });
-    });
-}
+      }
+    );
+  }
 
-// Search functionality
-document.getElementById('event-search').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const events = document.querySelectorAll('.event-item');
-    
-    events.forEach(event => {
-        const title = event.querySelector('h5').innerText.toLowerCase();
-        const description = event.querySelector('.event-description').innerText.toLowerCase();
-        const location = event.querySelector('.event-meta').innerText.toLowerCase();
-        
-        if (title.includes(searchTerm) || description.includes(searchTerm) || location.includes(searchTerm)) {
-            event.style.display = '';
+  // Search functionality
+  document
+    .getElementById("event-search")
+    .addEventListener("input", function (e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const events = document.querySelectorAll(".event-item");
+
+      events.forEach((event) => {
+        const title = event.querySelector("h5").innerText.toLowerCase();
+        const description = event
+          .querySelector(".event-description")
+          .innerText.toLowerCase();
+        const location = event
+          .querySelector(".event-meta")
+          .innerText.toLowerCase();
+
+        if (
+          title.includes(searchTerm) ||
+          description.includes(searchTerm) ||
+          location.includes(searchTerm)
+        ) {
+          event.style.display = "";
         } else {
-            event.style.display = 'none';
+          event.style.display = "none";
         }
+      });
     });
-});
 
-// Calculate statistics
-document.addEventListener('DOMContentLoaded', function() {
+  // Calculate statistics
+  document.addEventListener("DOMContentLoaded", function () {
     // Count total submissions
-    fetch('/form/stats/submissions')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('total-submissions').innerText = data.count;
-            updateAttendanceRate(data.count, parseInt(document.getElementById('total-scanned').innerText));
-        })
-        .catch(error => console.error('Error fetching submission stats:', error));
-    
+    fetch("/form/stats/submissions")
+      .then((response) => response.json())
+      .then((data) => {
+        document.getElementById("total-submissions").innerText = data.count;
+        updateAttendanceRate(
+          data.count,
+          parseInt(document.getElementById("total-scanned").innerText)
+        );
+      })
+      .catch((error) =>
+        console.error("Error fetching submission stats:", error)
+      );
+
     // Count scanned QR codes
-    fetch('/form/stats/scanned')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('total-scanned').innerText = data.count;
-            updateAttendanceRate(parseInt(document.getElementById('total-submissions').innerText), data.count);
-        })
-        .catch(error => console.error('Error fetching scan stats:', error));
-});
+    fetch("/form/stats/scanned")
+      .then((response) => response.json())
+      .then((data) => {
+        document.getElementById("total-scanned").innerText = data.count;
+        updateAttendanceRate(
+          parseInt(document.getElementById("total-submissions").innerText),
+          data.count
+        );
+      })
+      .catch((error) => console.error("Error fetching scan stats:", error));
+  });
 
-// Update attendance rate
-function updateAttendanceRate(submissions, scanned) {
+  // Update attendance rate
+  function updateAttendanceRate(submissions, scanned) {
     if (submissions > 0) {
-        const rate = Math.round((scanned / submissions) * 100);
-        document.getElementById('attendance-rate').innerText = rate + '%';
+      const rate = Math.round((scanned / submissions) * 100);
+      document.getElementById("attendance-rate").innerText = rate + "%";
     } else {
-        document.getElementById('attendance-rate').innerText = '0%';
+      document.getElementById("attendance-rate").innerText = "0%";
     }
-}
+  }
 
-// Handle capacity settings toggle
-document.addEventListener('DOMContentLoaded', function() {
+  // Handle capacity settings toggle
+  document.addEventListener("DOMContentLoaded", function () {
     // Add event listeners to capacity radio buttons
-    document.querySelectorAll('input[name="has_capacity"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const capacityInputGroup = document.querySelector('.capacity-input-group');
-            const capacityInput = document.getElementById('capacityInput');
-            
-            if (this.value === 'true') {
-                // Show capacity input when limited capacity is selected
-                capacityInputGroup.style.display = 'block';
-                capacityInput.required = true;
-            } else {
-                // Hide capacity input when unlimited capacity is selected
-                capacityInputGroup.style.display = 'none';
-                capacityInput.required = false;
-            }
+    document
+      .querySelectorAll('input[name="has_capacity"]')
+      .forEach(function (radio) {
+        radio.addEventListener("change", function () {
+          const capacityInputGroup = document.querySelector(
+            ".capacity-input-group"
+          );
+          const capacityInput = document.getElementById("capacityInput");
+
+          if (this.value === "true") {
+            // Show capacity input when limited capacity is selected
+            capacityInputGroup.style.display = "block";
+            capacityInput.required = true;
+          } else {
+            // Hide capacity input when unlimited capacity is selected
+            capacityInputGroup.style.display = "none";
+            capacityInput.required = false;
+          }
         });
-    });
-});
+      });
+  });
 </script>
 {% endblock %}
-

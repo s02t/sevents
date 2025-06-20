@@ -6,6 +6,7 @@
         <thead>
             <tr>
                 <th>#</th>
+                <th>Registration ID</th>
                 <th>QR Code</th>
                 <th>ID</th>
                 <th>Data</th>
@@ -19,6 +20,7 @@
             {% for item in qr_codes %}
             <tr>
                 <th scope="row">{{ loop.index }}</th>
+                <td>{{ item.submission.hash_id if item.submission else '-' }}</td>
                 <td>
                     <img src="/qr/qr-codes/{{ item.uuid }}.png" class="qr-image-table" alt="QR Code" style="max-width: 100px;">
                 </td>
@@ -38,12 +40,12 @@
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-danger" onclick="delete_item({{ item.id }})">Delete</button>
-                    <a href="/update/{{ item.id }}" class="btn btn-primary">Edit</a>
+                    <button class="btn btn-danger btn-sm" onclick="delete_item({{ item.id }})">Delete</button>
+                    <a href="/update/{{ item.id }}" class="btn btn-primary btn-sm">Edit</a>
                 </td>
             </tr>
-        {% endfor %}
-      </tbody>
+            {% endfor %}
+        </tbody>
     </table>
 </div>
 {% endblock %}

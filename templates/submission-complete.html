@@ -56,7 +56,7 @@
             <div class="col-md-6 mb-4">
               <h5>Registration Info</h5>
               <ul class="list-unstyled">
-                <li><strong>Registration ID:</strong> #{{ submission.id }}</li>
+                <li><strong>Registration ID:</strong> {{ submission.hash_id }}</li>
                 <li>
                   <strong>Submitted:</strong> {{
                   submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}

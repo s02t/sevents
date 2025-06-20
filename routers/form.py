@@ -327,7 +327,15 @@ async def view_form_submissions(
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
     
-    submissions = db.query(Submission).filter(Submission.form_id == form_id).options(joinedload(Submission.qr_code)).all()
+    # Get submissions with QR codes and order by submission date
+    submissions = db.query(Submission).filter(
+        Submission.form_id == form_id
+    ).options(
+        joinedload(Submission.qr_code)
+    ).order_by(
+        Submission.submitted_at.desc()
+    ).all()
+    
     fields = db.query(FormField).filter(FormField.form_id == form_id).order_by(FormField.order).all()
     event_images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
     
