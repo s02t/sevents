@@ -80,10 +80,21 @@ async def ensure_form_hash_ids():
 
 # Routes
 @app.get("/")
-async def root(request: Request):
-    # Redirect to login if not authenticated
-    if not request.session.get("user_id"):
+async def root(request: Request, db: db_dependency):
+    # Get user_id from session
+    user_id = request.session.get("user_id")
+    
+    # If no user_id in session, redirect to login
+    if not user_id:
         return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    
+    # Check if user exists in database
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        # Clear invalid session
+        request.session.clear()
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    
     return RedirectResponse(url="/form", status_code=status.HTTP_303_SEE_OTHER)
 
 # Admin login shortcut
