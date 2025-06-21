@@ -607,3 +607,46 @@ async def send_batch_email(
         "success": True, 
         "message": f"Email scheduled to be sent to {len(email_list)} recipients"
     }
+
+@router.delete("/forms/{form_id}", dependencies=[Depends(get_admin_user)])
+async def delete_form(
+    form_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a form and all its related data"""
+    form = db.query(FormModel).filter(FormModel.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Delete all related images first
+    images = db.query(EventImage).filter(EventImage.form_id == form_id).all()
+    for image in images:
+        # Delete physical file if it exists
+        if image.image_url and image.image_url.startswith("/static/uploads/"):
+            file_path = "." + image.image_url
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"Error removing file {file_path}: {str(e)}")
+    
+    # Delete all related QR codes
+    submissions = db.query(Submission).filter(Submission.form_id == form_id).all()
+    for submission in submissions:
+        if submission.qr_code:
+            # Delete physical QR code file if it exists
+            qr_file_path = f"qr_codes/{submission.qr_code.uuid}.png"
+            if os.path.exists(qr_file_path):
+                try:
+                    os.remove(qr_file_path)
+                except Exception as e:
+                    print(f"Error removing QR file {qr_file_path}: {str(e)}")
+    
+    # The database will handle cascading deletes for:
+    # - FormFields
+    # - EventImages
+    # - Submissions (which will cascade to QRCodes)
+    db.delete(form)
+    db.commit()
+    
+    return {"success": True, "message": "Event deleted successfully"}

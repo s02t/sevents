@@ -174,6 +174,14 @@
           >
             <i class="bi bi-link-45deg"></i>
           </button>
+          <button
+            class="btn btn-sm btn-danger d-flex align-items-center justify-content-center"
+            onclick="confirmDeleteEvent({{ form.id }}, '{{ form.title }}')"
+            data-bs-toggle="tooltip"
+            title="Delete event"
+          >
+            <i class="bi bi-trash"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -458,37 +466,33 @@
       });
   }
 
-  // Function to copy link to clipboard
-  function copyLink(path) {
-    const fullLink = window.location.origin + path;
-    navigator.clipboard.writeText(fullLink).then(
-      function () {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "success",
-          title: "Link copied to clipboard!",
-          showConfirmButton: false,
-          timer: 3000,
-        });
-      },
-      function () {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "error",
-          title: "Failed to copy link",
-          showConfirmButton: false,
-          timer: 3000,
-        });
-      }
-    );
+  // Copy registration link
+  function copyLink(link) {
+    const fullLink = window.location.origin + link;
+    navigator.clipboard.writeText(fullLink).then(() => {
+      Swal.fire({
+        title: 'Link Copied!',
+        text: 'Registration link has been copied to clipboard',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    });
   }
 
   // Search functionality
-  document
-    .getElementById("event-search")
-    .addEventListener("input", function (e) {
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById("event-search");
+    
+    // Handle search parameter from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      searchInput.value = searchParam;
+      searchInput.dispatchEvent(new Event('input'));
+    }
+    
+    searchInput.addEventListener("input", function (e) {
       const searchTerm = e.target.value.toLowerCase();
       const events = document.querySelectorAll(".event-item");
 
@@ -512,6 +516,7 @@
         }
       });
     });
+  });
 
   // Calculate statistics
   document.addEventListener("DOMContentLoaded", function () {
@@ -576,5 +581,67 @@
         });
       });
   });
+
+  // Delete event function
+  function confirmDeleteEvent(formId, formTitle) {
+    Swal.fire({
+      title: 'Delete Event?',
+      html: `Are you sure you want to delete <strong>${formTitle}</strong>?<br><br>This will permanently delete:<br>- All registrations<br>- All QR codes<br>- All event images<br><br>This action cannot be undone!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it',
+      confirmButtonColor: '#dc3545',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Show loading state
+        Swal.fire({
+          title: 'Deleting...',
+          text: 'Please wait while we delete the event and all related data',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        
+        // Send delete request
+        fetch(`/form/forms/${formId}`, {
+          method: 'DELETE'
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(data.detail || 'Failed to delete event');
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            Swal.fire({
+              title: 'Deleted!',
+              text: data.message,
+              icon: 'success',
+              confirmButtonColor: '#4361ee'
+            }).then(() => {
+              window.location.reload();
+            });
+          } else {
+            throw new Error(data.message || 'Failed to delete event');
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting event:', error);
+          Swal.fire({
+            title: 'Error',
+            text: error.message || 'Failed to delete event',
+            icon: 'error',
+            confirmButtonColor: '#ef476f'
+          });
+        });
+      }
+    });
+  }
 </script>
 {% endblock %}
