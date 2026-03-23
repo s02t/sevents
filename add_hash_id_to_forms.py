@@ -1,7 +1,7 @@
 from database import SessionLocal, engine
 from models import Base, FormModel
 import uuid
-
+##
 def add_hash_id_to_forms():
     """
     Migration script to add a hash_id to existing forms that don't have one.

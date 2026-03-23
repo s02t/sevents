@@ -17,7 +17,7 @@ from database import SessionLocal
 from models import FormModel, FormField, Submission, QRCode
 import os
 
-# Initialize Faker
+# Initialize Fakerr
 fake = Faker()
 
 def create_submissions(event_id, num_submissions=10):

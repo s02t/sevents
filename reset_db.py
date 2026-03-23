@@ -4,7 +4,7 @@ import os
 import shutil
 
 if __name__ == "__main__":
-    # Confirm with the user
+    # Confirm with the userr
     confirm = input("This will delete all data in the database. Are you sure? (y/n): ")
     
     if confirm.lower() != 'y':
