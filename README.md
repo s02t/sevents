@@ -16,9 +16,7 @@ This is an event management system with QR code generation and check-in function
 
 ### Link to Video Demo
 
-<video width="830" height="467" src="https://www.youtube.com/embed/ye8QURvuo6k" ></video>
-
-<iframe width="830" height="467" src="https://www.youtube.com/embed/ye8QURvuo6k" title="sevents demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+https://youtu.be/ye8QURvuo6k?si=XjXXQfQOxpGTIob7
 
 Features
 
