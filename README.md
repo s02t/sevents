@@ -1,4 +1,5 @@
-# QR Event Management System
+# sevents
+## QR Event Management System
 
 This is an event management system with QR code generation and check-in functionality.
 
