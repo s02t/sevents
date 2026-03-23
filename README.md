@@ -3,7 +3,22 @@
 
 This is an event management system with QR code generation and check-in functionality.
 
-## Features
+## Screenshots & Demo
+![image alt](https://github.com/s02t/sevents/blob/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-04-28%20sevents.png)
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-04-38%20sevents.png)
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-04-46%20sevents.png)
+
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-05-08%20sevents.png)
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-06-24%20sevents.png)
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-04-17%20sevents.png)
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-18-06%20sevents.png)
+![image alt](https://raw.githubusercontent.com/s02t/sevents/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/Screenshot%202026-03-23%20at%2011-18-21%20sevents.png)
+
+### Link to Video Demo
+
+<video src="https://github.com/s02t/sevents/raw/25c9d85d1438085a956fa598d7e81907c6e3d34a/screenshots/demo.mp4"></video>
+
+Features
 
 - Create and manage events
 - Generate customizable registration forms
